@@ -20,7 +20,9 @@
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel">
+  
+<script>
+
     const { useState, useCallback } = React;
 
 
@@ -568,6 +570,9 @@ const BODY_AREAS = [
   { id: "cardio", label: "Cardio / Endurance", icon: "🏃" },
   { id: "flexibility", label: "Flexibility / Mobility", icon: "🧘" },
 ];
+
+</script>
+<script type="text/babel">
 
 // -- UI --
 function Card({ children, style }) {
@@ -1701,6 +1706,7 @@ function App() {
 
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
-  </script>
+  
+</script>
 </body>
 </html>

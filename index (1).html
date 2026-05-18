@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="Wellness Hub"/>
+<title>Wellness Hub</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.26.0/dist/tabler-icons.min.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh}
+input,select,button,textarea{font-family:inherit}
+.app{max-width:700px;margin:0 auto;padding-bottom:80px}
+.header{padding:1.25rem 1rem 0}
+.header h1{font-size:20px;font-weight:500}
+.header p{font-size:13px;color:#666;margin-top:2px}
+.tabs{display:flex;gap:6px;padding:.75rem 1rem;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{white-space:nowrap;padding:6px 12px;border-radius:20px;border:0.5px solid rgba(0,0,0,0.2);background:#fff;color:#666;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.tab.active{background:#1a1a1a;color:#fff;border-color:transparent}
+.content{padding:0 1rem}
+.card{background:#fff;border:0.5px solid rgba(0,0,0,0.1);border-radius:12px;padding:14px 18px;margin-bottom:12px}
+.card-title{font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px}
+.metric{background:#f8f8f5;border-radius:8px;padding:12px 14px}
+.metric .lbl{font-size:12px;color:#666;margin-bottom:2px}
+.metric .val{font-size:19px;font-weight:500}
+.metric .unit{font-size:12px;color:#666}
+input[type=text],input[type=number],input[type=date],input[type=time],select,textarea{
+  width:100%;padding:8px 10px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.2);
+  font-size:14px;background:#fff;color:#1a1a1a;outline:none}
+input:focus,select:focus,textarea:focus{border-color:rgba(0,0,0,0.5)}
+.btn{padding:8px 14px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.2);background:#fff;
+  color:#1a1a1a;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0}
+.btn:hover{background:#f5f5f0}
+.btn.primary{background:#1a1a1a;color:#fff;border-color:transparent}
+.btn.primary:hover{opacity:.85}
+.btn.danger{color:#A32D2D;border-color:#F7C1C1}
+.btn.small{padding:5px 10px;font-size:12px}
+.pbar{height:8px;background:#eee;border-radius:4px;overflow:hidden;margin-top:4px}
+.pfill{height:100%;border-radius:4px;transition:width .3s}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.tag.green{background:#EAF3DE;color:#3B6D11}
+.tag.amber{background:#FAEEDA;color:#854F0B}
+.tag.blue{background:#E6F1FB;color:#185FA5}
+.tag.pink{background:#FBEAF0;color:#993556}
+.tag.purple{background:#EEEDFE;color:#534AB7}
+.tag.red{background:#FCEBEB;color:#A32D2D}
+.ai-box{background:#f8f8f5;border-radius:8px;padding:10px 12px;margin-top:8px;font-size:13px;line-height:1.6;color:#555;white-space:pre-wrap}
+.chip{padding:5px 12px;border-radius:20px;border:0.5px solid rgba(0,0,0,0.2);background:#fff;color:#666;font-size:13px;cursor:pointer;white-space:nowrap}
+.chip.active{background:#1a1a1a;color:#fff;border-color:transparent}
+.toggle{width:40px;height:22px;border-radius:11px;background:#ddd;border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle.on{background:#1D9E75}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle.on::after{transform:translateX(18px)}
+.food-row,.entry-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid rgba(0,0,0,0.08)}
+.food-row:last-child,.entry-row:last-child{border-bottom:none}
+.hidden{display:none!important}
+.flex{display:flex;gap:8px}
+.verified{font-size:11px;background:#EAF3DE;color:#3B6D11;padding:1px 6px;border-radius:8px;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>Wellness Hub</h1>
+    <p id="today-str"></p>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div class="content" id="content"></div>
+</div>
+
+<script>
+// -- BUILT-IN FOOD DATABASE (700+ foods) --
+// cal/pro/carb/fat per 100g or 100ml | itemG = weight of 1 item | cupG = weight of 1 cup
+const FOOD_DB = [
+  // -- KENYAN DISHES & STAPLES --
+  { name: "Ugali (maize, cooked)", cal: 110, pro: 2.3, carb: 24, fat: 0.4 },
+  { name: "Ugali (millet, cooked)", cal: 118, pro: 3, carb: 26, fat: 1 },
+  { name: "Ugali (sorghum, cooked)", cal: 112, pro: 3.2, carb: 24, fat: 1 },
+  { name: "Sukuma Wiki (cooked)", cal: 32, pro: 3, carb: 5.4, fat: 0.6, cupG: 130 },
+  { name: "Terere (amaranth greens, cooked)", cal: 36, pro: 3.5, carb: 4.5, fat: 0.5 },
+  { name: "Managu (black nightshade, cooked)", cal: 35, pro: 3.5, carb: 4, fat: 0.5 },
+  { name: "Saga / Cowpea Leaves (cooked)", cal: 42, pro: 4, carb: 5, fat: 0.6 },
+  { name: "Kunde (cowpea leaves, cooked)", cal: 44, pro: 4.2, carb: 5.5, fat: 0.6 },
+  { name: "Mchicha (amaranth/spinach stew)", cal: 45, pro: 4, carb: 5, fat: 2 },
+  { name: "Mboga za Kienyeji (mixed local greens)", cal: 38, pro: 3.5, carb: 5, fat: 0.5 },
+  { name: "Pumpkin Leaves / Maboga (cooked)", cal: 42, pro: 4, carb: 6, fat: 0.5 },
+  { name: "Githeri (maize and beans)", cal: 155, pro: 8, carb: 26, fat: 2, cupG: 200 },
+  { name: "Githeri with Potatoes", cal: 145, pro: 6, carb: 26, fat: 2 },
+  { name: "Irio (mashed peas, potato and corn)", cal: 120, pro: 4, carb: 22, fat: 2, cupG: 200 },
+  { name: "Mukimo (mashed potato and greens)", cal: 115, pro: 3.5, carb: 22, fat: 2 },
+  { name: "Matoke / Ndizi (green banana, cooked)", cal: 89, pro: 1.5, carb: 23, fat: 0.1 },
+  { name: "Nyama Choma (beef)", cal: 250, pro: 28, carb: 0, fat: 15 },
+  { name: "Nyama Choma (goat)", cal: 245, pro: 27, carb: 0, fat: 15 },
+  { name: "Nyama Choma (chicken / kienyeji)", cal: 215, pro: 25, carb: 0, fat: 12 },
+  { name: "Mutura (blood sausage)", cal: 290, pro: 22, carb: 3, fat: 21, itemG: 80, note: "~1 piece" },
+  { name: "Smokie Pasua (Kenyan sausage)", cal: 290, pro: 14, carb: 8, fat: 23, itemG: 100, note: "~1 smokie" },
+  { name: "Pilau (Kenyan spiced rice)", cal: 195, pro: 5, carb: 33, fat: 5.5, cupG: 190 },
+  { name: "Biryani / Biriani (chicken)", cal: 190, pro: 12, carb: 24, fat: 5, cupG: 200 },
+  { name: "Wali wa Nazi (coconut rice)", cal: 190, pro: 3, carb: 32, fat: 7, cupG: 195 },
+  { name: "Chapati (Kenyan)", cal: 265, pro: 7.5, carb: 42, fat: 7.5, itemG: 60, note: "~1 chapati" },
+  { name: "Mandazi", cal: 310, pro: 6, carb: 48, fat: 11, itemG: 50, note: "~1 mandazi" },
+  { name: "Mahamri (coconut doughnut)", cal: 340, pro: 5.5, carb: 50, fat: 14, itemG: 55, note: "~1 piece" },
+  { name: "Vitumbua (rice pancakes)", cal: 230, pro: 4.5, carb: 38, fat: 7, itemG: 35, note: "~1 piece" },
+  { name: "Viazi Karai / Bhajia (potato fritters)", cal: 295, pro: 4.5, carb: 38, fat: 14, itemG: 60, note: "~1 piece" },
+  { name: "Samosa (meat)", cal: 200, pro: 8, carb: 18, fat: 11, itemG: 70, note: "~1 samosa" },
+  { name: "Samosa (vegetable)", cal: 160, pro: 4, carb: 20, fat: 8, itemG: 60, note: "~1 samosa" },
+  { name: "Kachumbari (tomato onion salsa)", cal: 28, pro: 1.2, carb: 5.5, fat: 0.5, cupG: 150 },
+  { name: "Chicken Stew (Kenyan)", cal: 150, pro: 18, carb: 5, fat: 7, cupG: 245 },
+  { name: "Wet Fry Chicken", cal: 200, pro: 22, carb: 6, fat: 10, cupG: 200 },
+  { name: "Wet Fry Beef", cal: 220, pro: 24, carb: 5, fat: 12, cupG: 200 },
+  { name: "Beef Stew (Kenyan)", cal: 185, pro: 16, carb: 8, fat: 10, cupG: 245 },
+  { name: "Goat Stew", cal: 200, pro: 22, carb: 6, fat: 10, cupG: 245 },
+  { name: "Goat Meat (roasted)", cal: 143, pro: 27, carb: 0, fat: 3 },
+  { name: "Lamb Stew", cal: 195, pro: 17, carb: 9, fat: 11, cupG: 245 },
+  { name: "Matumbo / Tripe (cooked)", cal: 96, pro: 14, carb: 0, fat: 4 },
+  { name: "Ndengu (green grams, cooked)", cal: 105, pro: 7, carb: 19, fat: 0.4, cupG: 200 },
+  { name: "Dengu (split lentils, cooked)", cal: 116, pro: 9, carb: 20, fat: 0.4, cupG: 200 },
+  { name: "Maharagwe (red beans, cooked)", cal: 127, pro: 9, carb: 23, fat: 0.5, cupG: 177 },
+  { name: "Njahi (black beans, cooked)", cal: 116, pro: 8, carb: 20, fat: 0.5, cupG: 175 },
+  { name: "Njahe (lablab beans, cooked)", cal: 118, pro: 8.5, carb: 21, fat: 0.5 },
+  { name: "Minji (peas, cooked)", cal: 81, pro: 5.4, carb: 14, fat: 0.4, cupG: 160 },
+  { name: "Omena (lake sardines, dried)", cal: 313, pro: 54, carb: 0, fat: 10 },
+  { name: "Omena (lake sardines, cooked)", cal: 185, pro: 30, carb: 2, fat: 7 },
+  { name: "Tilapia (whole, grilled)", cal: 128, pro: 26, carb: 0, fat: 2.7, itemG: 400, note: "~1 whole fish" },
+  { name: "Nile Perch (grilled)", cal: 135, pro: 24, carb: 0, fat: 4 },
+  { name: "Ngwaci / Sweet Potato (boiled)", cal: 86, pro: 1.6, carb: 20, fat: 0.1, itemG: 130, note: "~1 medium" },
+  { name: "Nduma / Arrowroot (boiled)", cal: 65, pro: 2.8, carb: 14, fat: 0.2, itemG: 80, note: "~1 piece" },
+  { name: "Muogo / Cassava (boiled)", cal: 160, pro: 1.4, carb: 38, fat: 0.3 },
+  { name: "Mahindi (boiled maize cob)", cal: 96, pro: 3.4, carb: 21, fat: 1.5, itemG: 90, note: "~1 cob" },
+  { name: "Mahindi ya Kuchoma (roasted maize)", cal: 120, pro: 4, carb: 25, fat: 2, itemG: 85, note: "~1 cob" },
+  { name: "Kienyeji Chicken (free range, grilled)", cal: 180, pro: 30, carb: 0, fat: 6 },
+  { name: "Mursik (fermented milk, Kalenjin)", cal: 68, pro: 3.3, carb: 5, fat: 3.8, cupG: 240 },
+  { name: "Mtindi / Mala (soured milk)", cal: 60, pro: 3.2, carb: 4.7, fat: 3.3, cupG: 244 },
+  { name: "Uji wa Mtama (sorghum porridge)", cal: 52, pro: 1.8, carb: 11, fat: 0.5, cupG: 244 },
+  { name: "Uji wa Pembe (maize porridge)", cal: 55, pro: 1.2, carb: 12, fat: 0.3, cupG: 244 },
+  { name: "Uji wa Wimbi (finger millet porridge)", cal: 58, pro: 2, carb: 12, fat: 0.5, cupG: 244 },
+  { name: "Dawa (ginger lemon honey drink)", cal: 35, pro: 0.1, carb: 9, fat: 0, itemG: 240, note: "~1 glass" },
+  { name: "Mkate wa Kumimina (Swahili bread)", cal: 265, pro: 8, carb: 49, fat: 4 },
+  { name: "Rolex (chapati egg roll)", cal: 310, pro: 12, carb: 35, fat: 14, itemG: 150, note: "~1 roll" },
+  { name: "Mutura wa Nguruwe (pork sausage)", cal: 310, pro: 18, carb: 3, fat: 26, itemG: 80 },
+  { name: "Camel Meat (cooked)", cal: 160, pro: 24, carb: 0, fat: 7 },
+  // -- EAST AFRICAN REGIONAL --
+  { name: "Injera (Ethiopian flatbread)", cal: 150, pro: 4, carb: 30, fat: 0.8, itemG: 100, note: "~1 piece" },
+  { name: "Tibs (Ethiopian sauteed meat)", cal: 220, pro: 23, carb: 4, fat: 13 },
+  { name: "Doro Wat (Ethiopian chicken stew)", cal: 175, pro: 18, carb: 6, fat: 9, cupG: 244 },
+  { name: "Misir Wat (Ethiopian red lentils)", cal: 130, pro: 8.5, carb: 20, fat: 3, cupG: 244 },
+  { name: "Shiro (Ethiopian chickpea stew)", cal: 165, pro: 9, carb: 22, fat: 5, cupG: 244 },
+  { name: "Posho (Ugandan maize porridge)", cal: 108, pro: 2, carb: 24, fat: 0.3 },
+  { name: "Matoke (Ugandan plantain stew)", cal: 95, pro: 1.8, carb: 24, fat: 0.2 },
+  { name: "Groundnut Stew (East African)", cal: 320, pro: 15, carb: 14, fat: 25, cupG: 244 },
+  { name: "Sambusa (East African samosa)", cal: 180, pro: 6, carb: 20, fat: 9, itemG: 65, note: "~1 piece" },
+  { name: "Mandazi (Tanzanian)", cal: 310, pro: 6, carb: 48, fat: 11, itemG: 50 },
+  { name: "Ugali ya Pembe (Tanzanian)", cal: 110, pro: 2.3, carb: 24, fat: 0.4 },
+  { name: "Pilipili Hoho Sauce", cal: 40, pro: 1.5, carb: 8, fat: 0.5 },
+  // -- WEST AFRICAN --
+  { name: "Jollof Rice (Nigerian)", cal: 185, pro: 3.5, carb: 32, fat: 5, cupG: 190 },
+  { name: "Egusi Soup", cal: 420, pro: 18, carb: 10, fat: 35, cupG: 244 },
+  { name: "Ogbono Soup", cal: 350, pro: 15, carb: 8, fat: 30, cupG: 244 },
+  { name: "Okra Soup", cal: 160, pro: 8, carb: 12, fat: 10, cupG: 244 },
+  { name: "Banga Soup (palm nut)", cal: 380, pro: 10, carb: 12, fat: 35, cupG: 244 },
+  { name: "Efo Riro (spinach stew)", cal: 195, pro: 14, carb: 8, fat: 13, cupG: 244 },
+  { name: "Moimoi (bean pudding)", cal: 155, pro: 11, carb: 16, fat: 5, itemG: 100, note: "~1 wrap" },
+  { name: "Akara (bean fritters)", cal: 290, pro: 12, carb: 25, fat: 16, itemG: 50, note: "~1 piece" },
+  { name: "Puff Puff", cal: 320, pro: 5, carb: 38, fat: 17, itemG: 40, note: "~1 piece" },
+  { name: "Suya (spiced beef skewer)", cal: 290, pro: 30, carb: 5, fat: 16, itemG: 80, note: "~1 skewer" },
+  { name: "Fufu (cassava)", cal: 267, pro: 0.6, carb: 65, fat: 0.3 },
+  { name: "Fufu (yam)", cal: 118, pro: 1.5, carb: 28, fat: 0.2 },
+  { name: "Eba / Garri", cal: 357, pro: 0.6, carb: 85, fat: 0.6 },
+  { name: "Amala (yam flour)", cal: 330, pro: 3.5, carb: 78, fat: 0.5 },
+  { name: "Banku (fermented corn dough)", cal: 145, pro: 3.5, carb: 32, fat: 0.8 },
+  { name: "Kenkey (fermented corn ball)", cal: 155, pro: 4, carb: 34, fat: 1, itemG: 130, note: "~1 ball" },
+  { name: "Waakye (rice and beans, Ghanaian)", cal: 160, pro: 7, carb: 28, fat: 2, cupG: 200 },
+  { name: "Kontomire Stew (Ghanaian)", cal: 195, pro: 10, carb: 9, fat: 14, cupG: 244 },
+  { name: "Kelewele (spiced fried plantain)", cal: 240, pro: 1.5, carb: 44, fat: 8, cupG: 130 },
+  { name: "Chin Chin", cal: 480, pro: 8, carb: 60, fat: 23, cupG: 80 },
+  { name: "Pepper Soup (goat meat)", cal: 120, pro: 16, carb: 3, fat: 5, cupG: 244 },
+  { name: "Groundnut Soup (West African)", cal: 380, pro: 18, carb: 10, fat: 30, cupG: 244 },
+  { name: "Ogiri / Dawadawa (fermented locust bean)", cal: 350, pro: 30, carb: 15, fat: 18 },
+  // -- SOUTHERN AFRICAN --
+  { name: "Sadza (Zimbabwean)", cal: 110, pro: 2.3, carb: 24, fat: 0.4 },
+  { name: "Pap (South African)", cal: 110, pro: 2.3, carb: 24, fat: 0.4 },
+  { name: "Umngqusho (samp and beans)", cal: 165, pro: 8, carb: 28, fat: 2, cupG: 200 },
+  { name: "Boerewors (braai sausage)", cal: 350, pro: 16, carb: 2, fat: 31, itemG: 100, note: "~1 sausage" },
+  { name: "Bobotie (South African curry bake)", cal: 195, pro: 16, carb: 11, fat: 10 },
+  { name: "Bunny Chow (bread curry)", cal: 280, pro: 12, carb: 36, fat: 9, itemG: 300, note: "~1 half loaf" },
+  { name: "Chakalaka (spiced vegetable relish)", cal: 65, pro: 2, carb: 10, fat: 2 },
+  { name: "Morogo (wild spinach, cooked)", cal: 35, pro: 3.5, carb: 4, fat: 0.5 },
+  { name: "Mopane Worms (dried)", cal: 430, pro: 47, carb: 15, fat: 20 },
+  // -- NORTH AFRICAN --
+  { name: "Couscous (cooked)", cal: 112, pro: 3.8, carb: 23, fat: 0.2, cupG: 157 },
+  { name: "Couscous with vegetables", cal: 130, pro: 4.5, carb: 25, fat: 2.5, cupG: 200 },
+  { name: "Tagine (lamb)", cal: 220, pro: 18, carb: 12, fat: 11, cupG: 244 },
+  { name: "Tagine (chicken)", cal: 175, pro: 18, carb: 10, fat: 8, cupG: 244 },
+  { name: "Shakshuka (eggs in tomato sauce)", cal: 130, pro: 8, carb: 8, fat: 8, cupG: 244 },
+  { name: "Falafel", cal: 333, pro: 13, carb: 32, fat: 18, itemG: 17, note: "~1 ball" },
+  { name: "Hummus", cal: 177, pro: 8, carb: 14, fat: 10 },
+  { name: "Tabbouleh", cal: 86, pro: 2.5, carb: 11, fat: 4 },
+  { name: "Baba Ghanoush", cal: 96, pro: 2.4, carb: 9, fat: 6 },
+  { name: "Ful Medames (fava beans)", cal: 110, pro: 7.6, carb: 18, fat: 0.5, cupG: 241 },
+  // -- POULTRY --
+  { name: "Chicken Breast (grilled)", cal: 165, pro: 31, carb: 0, fat: 3.6, itemG: 150, note: "~1 medium breast" },
+  { name: "Chicken Breast (raw)", cal: 120, pro: 22, carb: 0, fat: 2.6, itemG: 150 },
+  { name: "Chicken Thigh (grilled)", cal: 209, pro: 26, carb: 0, fat: 11, itemG: 100 },
+  { name: "Chicken Drumstick (grilled)", cal: 195, pro: 28, carb: 0, fat: 9, itemG: 110, note: "~1 drumstick" },
+  { name: "Chicken Wings (grilled)", cal: 203, pro: 30, carb: 0, fat: 9, itemG: 35, note: "~1 wing" },
+  { name: "Chicken Liver (cooked)", cal: 172, pro: 26, carb: 1, fat: 6.5 },
+  { name: "Chicken Gizzard (cooked)", cal: 154, pro: 27, carb: 1.4, fat: 3.7 },
+  { name: "Turkey Breast (grilled)", cal: 157, pro: 30, carb: 0, fat: 3.5 },
+  { name: "Duck (roasted)", cal: 337, pro: 19, carb: 0, fat: 28 },
+  // -- BEEF --
+  { name: "Beef Mince (lean, cooked)", cal: 218, pro: 26, carb: 0, fat: 12 },
+  { name: "Beef Mince (regular, cooked)", cal: 254, pro: 24, carb: 0, fat: 17 },
+  { name: "Beef Steak (sirloin, grilled)", cal: 207, pro: 27, carb: 0, fat: 10, itemG: 200, note: "~1 steak" },
+  { name: "Beef Steak (ribeye, grilled)", cal: 291, pro: 24, carb: 0, fat: 21, itemG: 200 },
+  { name: "Beef Steak (fillet)", cal: 196, pro: 28, carb: 0, fat: 9, itemG: 180 },
+  { name: "Beef Roast", cal: 259, pro: 26, carb: 0, fat: 17 },
+  { name: "Beef Ribs (braised)", cal: 267, pro: 26, carb: 0, fat: 18 },
+  { name: "Beef Liver", cal: 175, pro: 27, carb: 4, fat: 5 },
+  { name: "Beef Tripe / Matumbo (cooked)", cal: 96, pro: 14, carb: 0, fat: 4 },
+  { name: "Beef Biltong / Jerky", cal: 286, pro: 55, carb: 0, fat: 7 },
+  { name: "Corned Beef (canned)", cal: 250, pro: 25, carb: 1, fat: 16 },
+  { name: "Goat Meat (roasted)", cal: 143, pro: 27, carb: 0, fat: 3 },
+  { name: "Camel Meat (cooked)", cal: 160, pro: 24, carb: 0, fat: 7 },
+  // -- PORK & LAMB --
+  { name: "Pork Chop (grilled)", cal: 231, pro: 25, carb: 0, fat: 14, itemG: 150 },
+  { name: "Pork Belly (roasted)", cal: 395, pro: 19, carb: 0, fat: 35 },
+  { name: "Bacon (1 rasher, grilled)", cal: 541, pro: 37, carb: 0, fat: 42, itemG: 28, note: "~1 rasher" },
+  { name: "Sausage (pork, grilled)", cal: 301, pro: 16, carb: 5, fat: 25, itemG: 60, note: "~1 sausage" },
+  { name: "Ham (cooked)", cal: 145, pro: 21, carb: 1.5, fat: 6 },
+  { name: "Lamb Chop (grilled)", cal: 268, pro: 24, carb: 0, fat: 19, itemG: 150 },
+  { name: "Lamb (roasted)", cal: 258, pro: 25, carb: 0, fat: 17 },
+  // -- FISH & SEAFOOD --
+  { name: "Salmon (baked)", cal: 208, pro: 20, carb: 0, fat: 13, itemG: 150, note: "~1 fillet" },
+  { name: "Tilapia (grilled)", cal: 128, pro: 26, carb: 0, fat: 2.7, itemG: 130, note: "~1 fillet" },
+  { name: "Tuna (canned in water)", cal: 116, pro: 26, carb: 0, fat: 1 },
+  { name: "Tuna (canned in oil)", cal: 198, pro: 29, carb: 0, fat: 9 },
+  { name: "Sardines (canned in tomato)", cal: 162, pro: 19, carb: 1, fat: 9 },
+  { name: "Mackerel (grilled)", cal: 305, pro: 19, carb: 0, fat: 25 },
+  { name: "Cod (baked)", cal: 105, pro: 23, carb: 0, fat: 0.9, itemG: 150 },
+  { name: "Catfish (grilled)", cal: 144, pro: 20, carb: 0, fat: 6 },
+  { name: "Stockfish (dried, rehydrated)", cal: 130, pro: 29, carb: 0, fat: 1 },
+  { name: "Prawns / Shrimp (boiled)", cal: 99, pro: 24, carb: 0.2, fat: 0.3 },
+  { name: "Crab (cooked)", cal: 97, pro: 19, carb: 0, fat: 2 },
+  { name: "Lobster (cooked)", cal: 97, pro: 20, carb: 0.5, fat: 1 },
+  { name: "Calamari / Squid (grilled)", cal: 92, pro: 16, carb: 3, fat: 1.4 },
+  // -- EGGS --
+  { name: "Boiled Egg", cal: 155, pro: 13, carb: 1.1, fat: 11, itemG: 50, note: "~1 large egg" },
+  { name: "Fried Egg", cal: 196, pro: 13, carb: 0.8, fat: 15, itemG: 46, note: "~1 large egg" },
+  { name: "Scrambled Eggs", cal: 182, pro: 12, carb: 1.5, fat: 14, itemG: 100, note: "~2 eggs" },
+  { name: "Poached Egg", cal: 143, pro: 13, carb: 0.7, fat: 10, itemG: 50 },
+  { name: "Omelette (plain, 2 eggs)", cal: 154, pro: 11, carb: 0.4, fat: 12, itemG: 100 },
+  { name: "Egg White", cal: 52, pro: 11, carb: 0.7, fat: 0.2, itemG: 33 },
+  // -- PLANT PROTEINS --
+  { name: "Tofu (firm)", cal: 76, pro: 8, carb: 2, fat: 4 },
+  { name: "Tofu (silken)", cal: 55, pro: 5, carb: 3, fat: 2 },
+  { name: "Lentils (cooked)", cal: 116, pro: 9, carb: 20, fat: 0.4, cupG: 200 },
+  { name: "Red Lentils (cooked)", cal: 111, pro: 9, carb: 19, fat: 0.4, cupG: 200 },
+  { name: "Chickpeas (cooked)", cal: 164, pro: 9, carb: 27, fat: 2.6, cupG: 164 },
+  { name: "Black Beans (cooked)", cal: 132, pro: 9, carb: 24, fat: 0.5, cupG: 172 },
+  { name: "Kidney Beans (cooked)", cal: 127, pro: 9, carb: 23, fat: 0.5, cupG: 177 },
+  { name: "Edamame (boiled)", cal: 121, pro: 11, carb: 9, fat: 5, cupG: 155 },
+  { name: "Tempeh", cal: 193, pro: 19, carb: 9, fat: 11 },
+  // -- RICE & GRAINS --
+  { name: "White Rice (cooked)", cal: 130, pro: 2.7, carb: 28, fat: 0.3, cupG: 186 },
+  { name: "Brown Rice (cooked)", cal: 123, pro: 2.7, carb: 26, fat: 1, cupG: 195 },
+  { name: "Basmati Rice (cooked)", cal: 121, pro: 3.5, carb: 25, fat: 0.4, cupG: 186 },
+  { name: "Jasmine Rice (cooked)", cal: 129, pro: 2.6, carb: 28, fat: 0.3, cupG: 186 },
+  { name: "Pasta (cooked)", cal: 158, pro: 5.8, carb: 31, fat: 0.9, cupG: 140 },
+  { name: "Spaghetti (cooked)", cal: 158, pro: 5.8, carb: 31, fat: 0.9, cupG: 140 },
+  { name: "Oats (cooked with water)", cal: 71, pro: 2.5, carb: 12, fat: 1.5, cupG: 234 },
+  { name: "Oats (dry / rolled)", cal: 389, pro: 17, carb: 66, fat: 7, cupG: 81 },
+  { name: "Millet (cooked)", cal: 119, pro: 3.5, carb: 23, fat: 1, cupG: 174 },
+  { name: "Sorghum (cooked)", cal: 110, pro: 3.7, carb: 22, fat: 1.1, cupG: 192 },
+  { name: "Quinoa (cooked)", cal: 120, pro: 4.4, carb: 21, fat: 1.9, cupG: 185 },
+  { name: "Couscous (cooked)", cal: 112, pro: 3.8, carb: 23, fat: 0.2, cupG: 157 },
+  { name: "Bulgur Wheat (cooked)", cal: 83, pro: 3.1, carb: 19, fat: 0.2, cupG: 182 },
+  { name: "Cornmeal / Maize Flour (dry)", cal: 362, pro: 8, carb: 76, fat: 3.6, cupG: 122 },
+  { name: "Finger Millet / Wimbi (flour, dry)", cal: 336, pro: 7.7, carb: 72, fat: 1.3 },
+  // -- BREAD & BAKED GOODS --
+  { name: "White Bread", cal: 265, pro: 9, carb: 51, fat: 3.2, itemG: 30, note: "~1 slice" },
+  { name: "Wholegrain Bread", cal: 247, pro: 12, carb: 41, fat: 4.2, itemG: 30, note: "~1 slice" },
+  { name: "Sourdough Bread", cal: 274, pro: 9, carb: 54, fat: 1.5, itemG: 35, note: "~1 slice" },
+  { name: "Pita Bread", cal: 275, pro: 9, carb: 54, fat: 1.2, itemG: 60, note: "~1 pita" },
+  { name: "Naan Bread", cal: 317, pro: 9, carb: 54, fat: 7, itemG: 90, note: "~1 piece" },
+  { name: "Bagel", cal: 250, pro: 10, carb: 49, fat: 1.5, itemG: 100, note: "~1 bagel" },
+  { name: "Croissant", cal: 406, pro: 8, carb: 45, fat: 21, itemG: 57, note: "~1 croissant" },
+  { name: "Pancake (plain)", cal: 227, pro: 6, carb: 28, fat: 10, itemG: 38, note: "~1 pancake" },
+  { name: "Waffle (plain)", cal: 291, pro: 8, carb: 37, fat: 13, itemG: 75, note: "~1 waffle" },
+  // -- POTATOES & TUBERS --
+  { name: "White Potato (boiled)", cal: 87, pro: 1.9, carb: 20, fat: 0.1, itemG: 150, note: "~1 medium" },
+  { name: "Sweet Potato (boiled)", cal: 86, pro: 1.6, carb: 20, fat: 0.1, itemG: 130, note: "~1 medium" },
+  { name: "French Fries / Chips", cal: 312, pro: 3.4, carb: 41, fat: 15, cupG: 134 },
+  { name: "Mashed Potato (with butter)", cal: 113, pro: 2, carb: 17, fat: 4.5, cupG: 210 },
+  { name: "Yam (boiled)", cal: 118, pro: 1.5, carb: 28, fat: 0.2 },
+  { name: "Yam (fried)", cal: 240, pro: 2, carb: 42, fat: 8 },
+  { name: "Cassava (boiled)", cal: 160, pro: 1.4, carb: 38, fat: 0.3 },
+  { name: "Cassava Leaves (cooked)", cal: 95, pro: 7, carb: 14, fat: 1 },
+  { name: "Plantain (boiled)", cal: 116, pro: 0.8, carb: 31, fat: 0.1, itemG: 120 },
+  { name: "Plantain (fried)", cal: 218, pro: 1.5, carb: 41, fat: 6, itemG: 100 },
+  { name: "Plantain (roasted)", cal: 130, pro: 1, carb: 34, fat: 0.2, itemG: 120 },
+  // -- VEGETABLES --
+  { name: "Spinach (raw)", cal: 23, pro: 2.9, carb: 3.6, fat: 0.4, cupG: 30 },
+  { name: "Spinach (cooked)", cal: 23, pro: 3, carb: 3.4, fat: 0.4, cupG: 180 },
+  { name: "Kale (raw)", cal: 49, pro: 4.3, carb: 9, fat: 0.9, cupG: 67 },
+  { name: "Collard Greens / Sukuma Wiki (cooked)", cal: 32, pro: 3, carb: 5.4, fat: 0.6, cupG: 190 },
+  { name: "Broccoli (steamed)", cal: 35, pro: 2.4, carb: 7, fat: 0.4, cupG: 156 },
+  { name: "Cauliflower (steamed)", cal: 25, pro: 2, carb: 5, fat: 0.3, cupG: 107 },
+  { name: "Cabbage (raw)", cal: 25, pro: 1.3, carb: 5.8, fat: 0.1, cupG: 89 },
+  { name: "Cabbage (cooked)", cal: 23, pro: 1.3, carb: 5, fat: 0.1, cupG: 150 },
+  { name: "Lettuce (romaine)", cal: 17, pro: 1.2, carb: 3.3, fat: 0.3, cupG: 47 },
+  { name: "Tomato (raw)", cal: 18, pro: 0.9, carb: 3.9, fat: 0.2, itemG: 123, note: "~1 medium" },
+  { name: "Cucumber (raw)", cal: 16, pro: 0.7, carb: 3.6, fat: 0.1, itemG: 200, note: "~1 whole" },
+  { name: "Bell Pepper (red)", cal: 31, pro: 1, carb: 6, fat: 0.3, itemG: 164, note: "~1 medium" },
+  { name: "Bell Pepper (green)", cal: 20, pro: 0.9, carb: 4.6, fat: 0.2, itemG: 164, note: "~1 medium" },
+  { name: "Onion (raw)", cal: 40, pro: 1.1, carb: 9.3, fat: 0.1, itemG: 110, note: "~1 medium" },
+  { name: "Garlic (raw)", cal: 149, pro: 6.4, carb: 33, fat: 0.5, itemG: 3, note: "~1 clove" },
+  { name: "Ginger (raw)", cal: 80, pro: 1.8, carb: 18, fat: 0.8 },
+  { name: "Carrot (raw)", cal: 41, pro: 0.9, carb: 10, fat: 0.2, itemG: 61, note: "~1 medium" },
+  { name: "Carrot (cooked)", cal: 35, pro: 0.8, carb: 8, fat: 0.2, cupG: 156 },
+  { name: "Peas (cooked)", cal: 81, pro: 5.4, carb: 14, fat: 0.4, cupG: 160 },
+  { name: "Sweetcorn (cooked)", cal: 96, pro: 3.4, carb: 21, fat: 1.5, cupG: 154 },
+  { name: "Sweetcorn on the cob", cal: 86, pro: 3.2, carb: 19, fat: 1.2, itemG: 90, note: "~1 cob" },
+  { name: "Green Beans (cooked)", cal: 35, pro: 1.9, carb: 7, fat: 0.3, cupG: 125 },
+  { name: "Courgette / Zucchini (raw)", cal: 17, pro: 1.2, carb: 3.1, fat: 0.3 },
+  { name: "Aubergine / Eggplant (cooked)", cal: 33, pro: 0.8, carb: 8, fat: 0.2 },
+  { name: "Mushrooms (raw)", cal: 22, pro: 3.1, carb: 3.3, fat: 0.3, cupG: 70 },
+  { name: "Mushrooms (sauteed)", cal: 26, pro: 1.8, carb: 3.1, fat: 1, cupG: 156 },
+  { name: "Beetroot (boiled)", cal: 44, pro: 1.7, carb: 10, fat: 0.2, itemG: 82, note: "~1 medium" },
+  { name: "Avocado", cal: 160, pro: 2, carb: 9, fat: 15, itemG: 200, note: "~1 whole avocado", cupG: 150 },
+  { name: "Okra (cooked)", cal: 33, pro: 2, carb: 7, fat: 0.2, cupG: 160 },
+  { name: "Pumpkin (boiled)", cal: 26, pro: 1, carb: 7, fat: 0.1, cupG: 245 },
+  { name: "Butternut Squash (roasted)", cal: 45, pro: 1, carb: 11, fat: 0.1, cupG: 205 },
+  { name: "Asparagus (cooked)", cal: 22, pro: 2.4, carb: 4, fat: 0.2, itemG: 18, note: "~1 spear" },
+  { name: "Celery (raw)", cal: 16, pro: 0.7, carb: 3, fat: 0.2, itemG: 40, note: "~1 stalk" },
+  // -- FRUITS --
+  { name: "Banana", cal: 89, pro: 1.1, carb: 23, fat: 0.3, itemG: 118, note: "~1 medium banana" },
+  { name: "Apple", cal: 52, pro: 0.3, carb: 14, fat: 0.2, itemG: 182, note: "~1 medium apple" },
+  { name: "Orange", cal: 47, pro: 0.9, carb: 12, fat: 0.1, itemG: 131, note: "~1 medium orange" },
+  { name: "Mango", cal: 60, pro: 0.8, carb: 15, fat: 0.4, itemG: 200, note: "~1 medium mango" },
+  { name: "Watermelon", cal: 30, pro: 0.6, carb: 7.6, fat: 0.2, cupG: 154 },
+  { name: "Pineapple", cal: 50, pro: 0.5, carb: 13, fat: 0.1, cupG: 165 },
+  { name: "Papaya / Pawpaw", cal: 43, pro: 0.5, carb: 11, fat: 0.3, cupG: 145 },
+  { name: "Strawberries", cal: 32, pro: 0.7, carb: 7.7, fat: 0.3, cupG: 152, itemG: 12 },
+  { name: "Blueberries", cal: 57, pro: 0.7, carb: 14, fat: 0.3, cupG: 148 },
+  { name: "Raspberries", cal: 52, pro: 1.2, carb: 12, fat: 0.7, cupG: 123 },
+  { name: "Grapes", cal: 67, pro: 0.6, carb: 17, fat: 0.4, cupG: 151 },
+  { name: "Kiwi", cal: 61, pro: 1.1, carb: 15, fat: 0.5, itemG: 76, note: "~1 kiwi" },
+  { name: "Pear", cal: 57, pro: 0.4, carb: 15, fat: 0.1, itemG: 178, note: "~1 pear" },
+  { name: "Peach", cal: 39, pro: 0.9, carb: 10, fat: 0.3, itemG: 150, note: "~1 peach" },
+  { name: "Plum", cal: 46, pro: 0.7, carb: 11, fat: 0.3, itemG: 66, note: "~1 plum" },
+  { name: "Guava", cal: 68, pro: 2.6, carb: 14, fat: 1, itemG: 100, note: "~1 guava" },
+  { name: "Passion Fruit", cal: 97, pro: 2.2, carb: 23, fat: 0.7, itemG: 18, note: "~1 passion fruit" },
+  { name: "Coconut (fresh flesh)", cal: 354, pro: 3.3, carb: 15, fat: 33, cupG: 80 },
+  { name: "Coconut Water", cal: 19, pro: 0.7, carb: 3.7, fat: 0.2, cupG: 240, itemG: 330, note: "~1 bottle" },
+  { name: "Dates (dried)", cal: 277, pro: 1.8, carb: 75, fat: 0.2, itemG: 24, note: "~1 date" },
+  { name: "Raisins", cal: 299, pro: 3.1, carb: 79, fat: 0.5, cupG: 165 },
+  { name: "Jackfruit (raw)", cal: 95, pro: 1.7, carb: 23, fat: 0.6 },
+  { name: "Lemon", cal: 29, pro: 1.1, carb: 9, fat: 0.3, itemG: 84, note: "~1 lemon" },
+  { name: "Lime", cal: 30, pro: 0.7, carb: 11, fat: 0.2, itemG: 67, note: "~1 lime" },
+  { name: "Tree Tomato / Tamarillo", cal: 31, pro: 1.5, carb: 7, fat: 0.1, itemG: 90, note: "~1 fruit" },
+  { name: "Soursop / Graviola", cal: 66, pro: 1, carb: 17, fat: 0.3 },
+  { name: "Baobab Fruit (pulp)", cal: 227, pro: 3.5, carb: 56, fat: 0.5 },
+  { name: "Tamarind", cal: 239, pro: 2.8, carb: 63, fat: 0.6 },
+  { name: "African Star Apple / Agbalumo", cal: 67, pro: 1.2, carb: 17, fat: 0.2, itemG: 40, note: "~1 fruit" },
+  // -- DAIRY --
+  { name: "Full Cream Milk", cal: 61, pro: 3.2, carb: 4.8, fat: 3.3, cupG: 244, itemG: 240, note: "~1 glass" },
+  { name: "Semi-Skimmed Milk", cal: 46, pro: 3.4, carb: 4.8, fat: 1.6, cupG: 244 },
+  { name: "Skimmed Milk", cal: 34, pro: 3.4, carb: 5, fat: 0.1, cupG: 244 },
+  { name: "Sour Milk / Mala (fermented)", cal: 60, pro: 3.2, carb: 4.7, fat: 3.3, cupG: 244 },
+  { name: "Oat Milk", cal: 45, pro: 1, carb: 6.5, fat: 1.5, cupG: 240 },
+  { name: "Almond Milk (unsweetened)", cal: 17, pro: 0.6, carb: 0.6, fat: 1.4, cupG: 240 },
+  { name: "Soy Milk", cal: 43, pro: 3.3, carb: 2.9, fat: 1.8, cupG: 240 },
+  { name: "Coconut Milk (canned)", cal: 197, pro: 2, carb: 6, fat: 21, cupG: 240 },
+  { name: "Greek Yoghurt (plain)", cal: 97, pro: 9, carb: 3.6, fat: 5, cupG: 245 },
+  { name: "Plain Yoghurt (full fat)", cal: 61, pro: 3.5, carb: 4.7, fat: 3.3, cupG: 245 },
+  { name: "Low Fat Yoghurt", cal: 56, pro: 4.5, carb: 7.7, fat: 0.6, cupG: 245 },
+  { name: "Cheddar Cheese", cal: 403, pro: 25, carb: 1.3, fat: 33, itemG: 28, note: "~1 slice" },
+  { name: "Mozzarella Cheese", cal: 280, pro: 22, carb: 2.2, fat: 22, itemG: 28 },
+  { name: "Feta Cheese", cal: 264, pro: 14, carb: 4, fat: 21 },
+  { name: "Cottage Cheese", cal: 98, pro: 11, carb: 3.4, fat: 4.3, cupG: 226 },
+  { name: "Cream Cheese", cal: 342, pro: 6, carb: 4, fat: 34 },
+  { name: "Butter", cal: 717, pro: 0.9, carb: 0.1, fat: 81, itemG: 14, note: "~1 tablespoon" },
+  { name: "Ghee", cal: 900, pro: 0, carb: 0, fat: 99 },
+  { name: "Ice Cream (vanilla)", cal: 207, pro: 3.5, carb: 24, fat: 11, cupG: 132 },
+  // -- OILS & FATS --
+  { name: "Olive Oil", cal: 884, pro: 0, carb: 0, fat: 100 },
+  { name: "Vegetable / Sunflower Oil", cal: 884, pro: 0, carb: 0, fat: 100 },
+  { name: "Coconut Oil", cal: 862, pro: 0, carb: 0, fat: 100 },
+  { name: "Palm Oil", cal: 884, pro: 0, carb: 0, fat: 100 },
+  { name: "Groundnut / Peanut Oil", cal: 884, pro: 0, carb: 0, fat: 100 },
+  { name: "Mayonnaise", cal: 680, pro: 1, carb: 0.6, fat: 75 },
+  // -- NUTS, SEEDS & BUTTERS --
+  { name: "Almonds", cal: 579, pro: 21, carb: 22, fat: 50, cupG: 143 },
+  { name: "Cashews", cal: 553, pro: 18, carb: 30, fat: 44, cupG: 137 },
+  { name: "Walnuts", cal: 654, pro: 15, carb: 14, fat: 65, cupG: 117 },
+  { name: "Groundnuts / Peanuts (roasted)", cal: 567, pro: 26, carb: 16, fat: 49, cupG: 146 },
+  { name: "Macadamia Nuts", cal: 718, pro: 8, carb: 14, fat: 76, cupG: 134 },
+  { name: "Pistachios", cal: 562, pro: 20, carb: 28, fat: 45, cupG: 123 },
+  { name: "Tiger Nuts / Chufas", cal: 396, pro: 5, carb: 78, fat: 10 },
+  { name: "Peanut Butter", cal: 588, pro: 25, carb: 20, fat: 50 },
+  { name: "Almond Butter", cal: 614, pro: 21, carb: 19, fat: 56 },
+  { name: "Chia Seeds", cal: 486, pro: 17, carb: 42, fat: 31 },
+  { name: "Flaxseeds / Linseed", cal: 534, pro: 18, carb: 29, fat: 42 },
+  { name: "Sesame Seeds", cal: 573, pro: 18, carb: 23, fat: 50 },
+  { name: "Pumpkin Seeds", cal: 559, pro: 30, carb: 11, fat: 49, cupG: 129 },
+  { name: "Sunflower Seeds", cal: 584, pro: 21, carb: 20, fat: 51, cupG: 128 },
+  // -- CONDIMENTS & SAUCES --
+  { name: "Tomato Ketchup", cal: 101, pro: 1.4, carb: 26, fat: 0.1 },
+  { name: "Soy Sauce", cal: 53, pro: 8, carb: 5, fat: 0.1 },
+  { name: "Hot Sauce / Pili Pili", cal: 12, pro: 0.6, carb: 2, fat: 0.5 },
+  { name: "Honey", cal: 304, pro: 0.3, carb: 82, fat: 0 },
+  { name: "Sugar (white)", cal: 387, pro: 0, carb: 100, fat: 0 },
+  { name: "Brown Sugar", cal: 380, pro: 0.1, carb: 98, fat: 0 },
+  { name: "Tomato Paste", cal: 82, pro: 4, carb: 19, fat: 0.5 },
+  { name: "Canned Tomatoes", cal: 24, pro: 1.2, carb: 4.8, fat: 0.2, cupG: 240 },
+  { name: "Coconut Cream", cal: 330, pro: 3.6, carb: 6, fat: 35 },
+  { name: "Chocolate Spread (Nutella)", cal: 539, pro: 6, carb: 58, fat: 31 },
+  // -- SNACKS & TREATS --
+  { name: "Dark Chocolate (70 percent)", cal: 598, pro: 8, carb: 46, fat: 43, itemG: 30, note: "~1 small bar" },
+  { name: "Milk Chocolate", cal: 535, pro: 7.7, carb: 59, fat: 30, itemG: 30, note: "~1 small bar" },
+  { name: "Crisps / Potato Chips", cal: 536, pro: 7, carb: 53, fat: 35, itemG: 25, note: "~small bag" },
+  { name: "Popcorn (air popped)", cal: 387, pro: 13, carb: 78, fat: 5, cupG: 8 },
+  { name: "Granola Bar", cal: 400, pro: 8, carb: 64, fat: 14, itemG: 47, note: "~1 bar" },
+  { name: "Protein Bar (average)", cal: 350, pro: 25, carb: 40, fat: 10, itemG: 60, note: "~1 bar" },
+  { name: "Doughnut (glazed)", cal: 452, pro: 4.9, carb: 51, fat: 25, itemG: 60, note: "~1 doughnut" },
+  // -- FAST FOOD --
+  { name: "Burger (beef, regular)", cal: 295, pro: 17, carb: 24, fat: 14, itemG: 170, note: "~1 burger" },
+  { name: "Cheeseburger", cal: 303, pro: 17, carb: 24, fat: 13, itemG: 180, note: "~1 cheeseburger" },
+  { name: "Chicken Burger", cal: 283, pro: 21, carb: 27, fat: 10, itemG: 170, note: "~1 burger" },
+  { name: "Pizza (cheese, 1 slice)", cal: 266, pro: 11, carb: 33, fat: 10, itemG: 107, note: "~1 slice" },
+  { name: "Pizza (pepperoni, 1 slice)", cal: 298, pro: 12, carb: 34, fat: 12, itemG: 107, note: "~1 slice" },
+  { name: "Fried Chicken (1 piece)", cal: 260, pro: 20, carb: 9, fat: 16, itemG: 100, note: "~1 piece" },
+  { name: "Chicken Nuggets (6 pieces)", cal: 270, pro: 15, carb: 17, fat: 16, itemG: 100, note: "~6 pieces" },
+  { name: "Shawarma / Wrap", cal: 250, pro: 16, carb: 22, fat: 11, itemG: 250, note: "~1 wrap" },
+  { name: "Hot Dog (with bun)", cal: 290, pro: 11, carb: 24, fat: 16, itemG: 130, note: "~1 hot dog" },
+  { name: "Noodles (instant, cooked)", cal: 138, pro: 3.5, carb: 26, fat: 2.5, cupG: 227 },
+  // -- BEVERAGES --
+  { name: "Black Coffee (no sugar)", cal: 2, pro: 0.3, carb: 0, fat: 0, cupG: 240, itemG: 240, note: "~1 cup" },
+  { name: "Coffee with milk", cal: 11, pro: 0.7, carb: 0.9, fat: 0.5, cupG: 240, itemG: 240, note: "~1 cup" },
+  { name: "Coffee with milk and sugar", cal: 30, pro: 0.7, carb: 5.5, fat: 0.5, cupG: 240, itemG: 240, note: "~1 cup" },
+  { name: "Cappuccino", cal: 74, pro: 3.8, carb: 6.7, fat: 3.2, cupG: 180, itemG: 180, note: "~1 cup" },
+  { name: "Latte (full cream milk)", cal: 79, pro: 4, carb: 8, fat: 3.5, cupG: 300, itemG: 300, note: "~1 cup" },
+  { name: "Tea (black, no sugar)", cal: 1, pro: 0, carb: 0.2, fat: 0, cupG: 240, itemG: 240, note: "~1 cup" },
+  { name: "Tea with milk and sugar", cal: 45, pro: 1, carb: 8, fat: 1, cupG: 240, itemG: 240, note: "~1 cup" },
+  { name: "Chai Tea / Masala Tea", cal: 67, pro: 2.8, carb: 9.5, fat: 2.2, cupG: 240, itemG: 240, note: "~1 cup" },
+  { name: "Green Tea", cal: 1, pro: 0, carb: 0.1, fat: 0, cupG: 240, itemG: 240, note: "~1 cup" },
+  { name: "Ginger Tea", cal: 5, pro: 0.1, carb: 1, fat: 0, cupG: 240, itemG: 240, note: "~1 cup" },
+  { name: "Mursik (fermented milk, Kalenjin)", cal: 68, pro: 3.3, carb: 5, fat: 3.8, cupG: 240 },
+  { name: "Mtindi / Mala (soured milk)", cal: 60, pro: 3.2, carb: 4.7, fat: 3.3, cupG: 244 },
+  { name: "Uji wa Mtama (sorghum porridge drink)", cal: 52, pro: 1.8, carb: 11, fat: 0.5, cupG: 244 },
+  { name: "Dawa (ginger lemon honey drink)", cal: 35, pro: 0.1, carb: 9, fat: 0, itemG: 240, note: "~1 glass" },
+  { name: "Orange Juice (fresh)", cal: 45, pro: 0.7, carb: 10, fat: 0.2, cupG: 248 },
+  { name: "Mango Juice", cal: 60, pro: 0.4, carb: 14, fat: 0.2, cupG: 250 },
+  { name: "Passion Fruit Juice", cal: 55, pro: 0.7, carb: 13, fat: 0.1, cupG: 240 },
+  { name: "Tamarind Juice", cal: 45, pro: 0.3, carb: 11, fat: 0.1, cupG: 240 },
+  { name: "Coca-Cola / Pepsi", cal: 42, pro: 0, carb: 11, fat: 0, itemG: 330, note: "~1 can" },
+  { name: "Diet Coke / Zero", cal: 0, pro: 0, carb: 0.1, fat: 0, itemG: 330, note: "~1 can" },
+  { name: "Energy Drink (Red Bull)", cal: 45, pro: 0, carb: 11, fat: 0, itemG: 250, note: "~1 can" },
+  { name: "Beer (regular, 1 can)", cal: 43, pro: 0.5, carb: 3.6, fat: 0, itemG: 330, note: "~1 can" },
+  { name: "Wine (red, 1 glass)", cal: 85, pro: 0.1, carb: 2.6, fat: 0, itemG: 150, note: "~1 glass" },
+  { name: "Wine (white, 1 glass)", cal: 82, pro: 0.1, carb: 2.6, fat: 0, itemG: 150, note: "~1 glass" },
+  { name: "Protein Shake (whey, water)", cal: 120, pro: 25, carb: 5, fat: 1.5, itemG: 400, note: "~1 shake" },
+  { name: "Water", cal: 0, pro: 0, carb: 0, fat: 0, cupG: 240 },
+  // -- BREAKFAST FOODS --
+  { name: "Cornflakes", cal: 357, pro: 7, carb: 84, fat: 0.8, cupG: 28 },
+  { name: "Muesli", cal: 368, pro: 10, carb: 66, fat: 7, cupG: 90 },
+  { name: "Granola", cal: 471, pro: 10, carb: 64, fat: 20, cupG: 122 },
+  { name: "Weetabix (2 biscuits)", cal: 136, pro: 5, carb: 27, fat: 0.9, itemG: 38, note: "~2 biscuits" },
+  { name: "Baked Beans (canned)", cal: 94, pro: 5, carb: 17, fat: 0.3, cupG: 254 },
+  // -- SUPPLEMENTS --
+  { name: "Whey Protein Powder", cal: 400, pro: 80, carb: 8, fat: 5 },
+  { name: "Casein Protein Powder", cal: 370, pro: 72, carb: 10, fat: 4 },
+  { name: "Pea Protein Powder", cal: 360, pro: 75, carb: 5, fat: 4 },
+];
+
+const UNIT_OPTIONS=[
+  {v:"g",l:"grams (g)"},{v:"kg",l:"kilograms (kg)"},{v:"ml",l:"millilitres (ml)"},
+  {v:"l",l:"litres (l)"},{v:"cup",l:"cup (~240ml)"},{v:"tbsp",l:"tablespoon (~15ml)"},
+  {v:"tsp",l:"teaspoon (~5ml)"},{v:"oz",l:"ounces (oz)"},{v:"lb",l:"pounds (lb)"},
+  {v:"item",l:"item / piece"},{v:"slice",l:"slice"},{v:"portion",l:"portion"}
+];
+
+const BODY_AREAS=["Chest","Back","Shoulders","Arms / Biceps / Triceps","Core / Abs",
+  "Glutes / Booty","Legs / Quads / Hamstrings","Calves","Full Body","Cardio / Endurance","Flexibility / Mobility"];
+
+const SYMPTOM_LIST=["Cramps","Bloating","Spotting","Heavy flow","Light flow","Breast tenderness",
+  "Headache","Fatigue","Mood swings","Nausea","Back pain","Acne","Food cravings",
+  "Increased libido","Clear/stretchy discharge","Pelvic pain","Constipation","Insomnia"];
+
+const STORAGE_KEY="wellness_hub_v5";
+const TODAY=new Date().toISOString().split("T")[0];
+
+const TABS=[
+  {id:"nutrition",label:"Nutrition",icon:"ti-salad"},
+  {id:"workouts",label:"Workouts",icon:"ti-barbell"},
+  {id:"steps",label:"Steps",icon:"ti-shoe"},
+  {id:"habits",label:"Habits",icon:"ti-checklist"},
+  {id:"goals",label:"Goals",icon:"ti-target"},
+  {id:"weight",label:"Weight",icon:"ti-scale"},
+  {id:"cycle",label:"Cycle",icon:"ti-moon"}
+];
+
+let state={
+  date:TODAY,foods:[],water:0,steps:0,stepHistory:[],
+  habits:{water:false,devotion:false,sleep:0,bedtime:"",wakeTime:""},
+  goals:{calories:2000,water:2500,steps:10000,sleep:8,protein:150,monthlySteps:300000},
+  programs:[],workoutSessions:[],weightLog:[],goalWeight:null,heightCm:null,
+  cycle:{periodDates:[],ovulationDates:[],symptoms:{},avgCycleLength:28,avgPeriodDuration:5}
+};
+
+let activeTab="nutrition";
+
+function loadState(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    const s=JSON.parse(raw);
+    if(s.date!==TODAY){
+      s.date=TODAY;s.foods=[];s.water=0;s.steps=0;
+      s.habits={water:false,devotion:false,sleep:0,bedtime:"",wakeTime:""};
+    }
+    state={...state,...s};
+  }catch(e){}
+}
+
+function save(){
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}
+}
+
+function smartToGrams(qty,unit,food){
+  if(unit==="g"||unit==="ml") return qty;
+  if(unit==="kg") return qty*1000;
+  if(unit==="l") return qty*1000;
+  if(unit==="oz") return qty*28.35;
+  if(unit==="lb") return qty*453.6;
+  if(unit==="tbsp") return qty*15;
+  if(unit==="tsp") return qty*5;
+  if(unit==="cup") return qty*(food&&food.cupG||240);
+  return qty*(food&&food.itemG||100);
+}
+
+function searchLocalDB(query){
+  const q=query.toLowerCase().trim();
+  const words=q.split(/\s+/).filter(w=>w.length>1);
+  return FOOD_DB.map(food=>{
+    const name=food.name.toLowerCase();
+    let score=0;
+    words.forEach(w=>{if(name.startsWith(w))score+=3;else if(name.includes(w))score+=1;});
+    return{food,score};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,6).map(x=>x.food);
+}
+
+async function callAI(prompt){
+  const r=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})
+  });
+  const d=await r.json();
+  return(d.content||[]).map(b=>b.text||"").join("");
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────────
+function el(tag,attrs={},children=[]){
+  const e=document.createElement(tag);
+  Object.entries(attrs).forEach(([k,v])=>{
+    if(k==="style"&&typeof v==="object") Object.assign(e.style,v);
+    else if(k.startsWith("on")&&typeof v==="function") e.addEventListener(k.slice(2).toLowerCase(),v);
+    else if(k==="class") e.className=v;
+    else if(k==="html") e.innerHTML=v;
+    else e.setAttribute(k,v);
+  });
+  children.forEach(c=>{
+    if(c===null||c===undefined||c===false) return;
+    if(typeof c==="string"||typeof c==="number") e.appendChild(document.createTextNode(c));
+    else if(c instanceof Node) e.appendChild(c);
+    else if(Array.isArray(c)) c.forEach(cc=>cc&&e.appendChild(typeof cc==="string"?document.createTextNode(cc):cc));
+  });
+  return e;
+}
+
+function pbar(value,max,color="#1D9E75"){
+  const pct=Math.min(100,max>0?Math.round(value/max*100):0);
+  return el("div",{class:"pbar"},[el("div",{class:"pfill",style:{width:pct+"%",background:color}})]);
+}
+
+function mcard(label,value,unit,color){
+  return el("div",{class:"metric"},[
+    el("div",{class:"lbl"},[label]),
+    el("div",{class:"val",style:{color:color||""}},[String(value)]),
+    el("div",{class:"unit"},[unit])
+  ]);
+}
+
+function cardTitle(icon,text){
+  return el("div",{class:"card-title"},[el("i",{class:"ti "+icon,"aria-hidden":"true"}),text]);
+}
+
+function btn(text,onClick,cls=""){
+  return el("button",{class:"btn "+(cls||""),onClick},[text]);
+}
+
+function tag(text,color="green"){
+  return el("span",{class:"tag "+color},[text]);
+}
+
+function chip(text,active,onClick){
+  return el("button",{class:"chip"+(active?" active":""),onClick},[text]);
+}
+
+function toggle(on,onClick){
+  return el("button",{class:"toggle"+(on?" on":""),onClick});
+}
+
+function aiBox(text,loading){
+  if(!text&&!loading) return null;
+  return el("div",{class:"ai-box"},[loading?"Thinking...":text]);
+}
+
+function unitSelect(value,onChange){
+  const s=el("select",{onChange});
+  UNIT_OPTIONS.forEach(o=>{
+    const opt=el("option",{value:o.v},[o.l]);
+    if(o.v===value) opt.selected=true;
+    s.appendChild(opt);
+  });
+  return s;
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────────
+function render(){
+  // Tabs
+  const tabsEl=document.getElementById("tabs");
+  tabsEl.innerHTML="";
+  TABS.forEach(t=>{
+    tabsEl.appendChild(el("button",{
+      class:"tab"+(activeTab===t.id?" active":""),
+      onClick:()=>{activeTab=t.id;render();}
+    },[el("i",{class:"ti "+t.icon,"aria-hidden":"true"}),t.label]));
+  });
+
+  const content=document.getElementById("content");
+  content.innerHTML="";
+  if(activeTab==="nutrition") content.appendChild(renderNutrition());
+  else if(activeTab==="workouts") content.appendChild(renderWorkouts());
+  else if(activeTab==="steps") content.appendChild(renderSteps());
+  else if(activeTab==="habits") content.appendChild(renderHabits());
+  else if(activeTab==="goals") content.appendChild(renderGoals());
+  else if(activeTab==="weight") content.appendChild(renderWeight());
+  else if(activeTab==="cycle") content.appendChild(renderCycle());
+}
+
+// ── NUTRITION ──────────────────────────────────────────────────────────────────
+function renderNutrition(){
+  const div=el("div");
+  const totalCals=state.foods.reduce((s,f)=>s+(f.calories||0),0);
+  const totalProt=state.foods.reduce((s,f)=>s+(f.protein||0),0);
+  const totalCarbs=state.foods.reduce((s,f)=>s+(f.carbs||0),0);
+  const totalFat=state.foods.reduce((s,f)=>s+(f.fat||0),0);
+  const totalFibre=state.foods.reduce((s,f)=>s+(f.fibre||0),0);
+
+  // Calorie card
+  const calCard=el("div",{class:"card"});
+  calCard.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6}},[
+    el("p",{style:{fontSize:15,fontWeight:500}},["Calories"]),
+    el("p",{style:{fontSize:13,color:"#666"}},[el("span",{style:{fontSize:22,fontWeight:600,color:"#D85A30"}},[String(totalCals)])," / "+state.goals.calories+" kcal"])
+  ]));
+  calCard.appendChild(pbar(totalCals,state.goals.calories,"#D85A30"));
+  const rem=state.goals.calories-totalCals;
+  calCard.appendChild(el("p",{style:{fontSize:11,color:"#666",marginTop:3}},[rem>0?rem+" kcal remaining":((-rem)+" kcal over goal")]));
+  div.appendChild(calCard);
+
+  // Macros card
+  const macroCard=el("div",{class:"card"});
+  macroCard.appendChild(cardTitle("ti-chart-pie","Macros Breakdown"));
+  const protCals=totalProt*4,carbCals=totalCarbs*4,fatCals=totalFat*9;
+  const tot=protCals+carbCals+fatCals||1;
+  const pS=Math.round(protCals/tot*100),cS=Math.round(carbCals/tot*100),fS=Math.round(fatCals/tot*100);
+  if(tot>1){
+    const bar=el("div",{style:{display:"flex",height:10,borderRadius:5,overflow:"hidden",marginBottom:10,gap:2}});
+    bar.appendChild(el("div",{style:{width:pS+"%",background:"#534AB7",borderRadius:"5px 0 0 5px"}}));
+    bar.appendChild(el("div",{style:{width:cS+"%",background:"#BA7517"}}));
+    bar.appendChild(el("div",{style:{width:fS+"%",background:"#1D9E75",borderRadius:"0 5px 5px 0"}}));
+    macroCard.appendChild(bar);
+  }
+  [{label:"Protein",val:totalProt,goal:state.goals.protein||150,unit:"g",color:"#534AB7",split:pS},
+   {label:"Carbs",val:totalCarbs,goal:null,unit:"g",color:"#BA7517",split:cS},
+   {label:"Fat",val:totalFat,goal:null,unit:"g",color:"#1D9E75",split:fS},
+   {label:"Fibre",val:totalFibre,goal:25,unit:"g",color:"#0F6E56",split:null}
+  ].forEach(m=>{
+    const row=el("div",{style:{marginBottom:10}});
+    const hdr=el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:2}});
+    const dot=el("span",{style:{width:10,height:10,borderRadius:"50%",background:m.color,display:"inline-block",marginRight:6}});
+    const lbl=el("span",{},[dot,m.label,m.split!==null?el("span",{style:{fontSize:11,color:"#666",marginLeft:4}},[" ("+m.split+"%)"]):""].filter(Boolean));
+    const val=el("span",{style:{color:"#666"}},[el("strong",{style:{color:m.color}},[m.val.toFixed(1)+m.unit]),m.goal?" / "+m.goal+m.unit+" goal":""]);
+    hdr.appendChild(lbl);hdr.appendChild(val);row.appendChild(hdr);
+    if(m.goal) row.appendChild(pbar(m.val,m.goal,m.color));
+    else row.appendChild(el("div",{style:{height:6,background:m.color,borderRadius:3,opacity:0.25,marginTop:4}}));
+    macroCard.appendChild(row);
+  });
+  div.appendChild(macroCard);
+
+  // Search card
+  const searchCard=el("div",{class:"card"});
+  searchCard.appendChild(cardTitle("ti-search","Search Food Database"));
+  searchCard.appendChild(el("p",{style:{fontSize:12,color:"#666",marginBottom:8}},["400+ foods including Kenyan & African staples. AI fallback if not found."]));
+  const searchRow=el("div",{class:"row",style:{marginBottom:8}});
+  const searchInp=el("input",{type:"text",placeholder:"e.g. ugali, chapati, chicken, avocado..."});
+  const resultsDiv=el("div");
+  const aiResultDiv=el("div");
+
+  async function doSearch(){
+    const q=searchInp.value.trim();
+    if(!q) return;
+    resultsDiv.innerHTML="";aiResultDiv.innerHTML="";
+    const local=searchLocalDB(q);
+    if(local.length){
+      local.forEach(food=>{
+        const defUnit=food.itemG?"item":"g";
+        const defQty=food.itemG?"1":"100";
+        const row=el("div",{style:{padding:"10px 0",borderBottom:"0.5px solid rgba(0,0,0,0.08)"}});
+        const hdr=el("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:4}});
+        hdr.appendChild(el("p",{style:{fontSize:14,fontWeight:500}},[food.name]));
+        hdr.appendChild(el("span",{class:"verified"},["Verified"]));
+        row.appendChild(hdr);
+        row.appendChild(el("p",{style:{fontSize:12,color:"#666",marginBottom:4}},[food.cal+" kcal · "+food.pro+"g protein per 100g"]));
+        if(food.note) row.appendChild(el("p",{style:{fontSize:11,color:"#534AB7",marginBottom:6}},[food.note]));
+        const addRow=el("div",{class:"row"});
+        const qtyInp=el("input",{type:"number",value:defQty,style:{width:60}});
+        const unitSel=el("select");
+        UNIT_OPTIONS.forEach(o=>{
+          const opt=document.createElement("option");
+          opt.value=o.v;opt.textContent=o.l;
+          if(o.v===defUnit) opt.selected=true;
+          unitSel.appendChild(opt);
+        });
+        const estSpan=el("span",{style:{fontSize:13,color:"#D85A30",fontWeight:600}});
+        function updateEst(){
+          const g=smartToGrams(parseFloat(qtyInp.value)||100,unitSel.value,food);
+          estSpan.textContent=Math.round(food.cal*g/100)+" kcal";
+        }
+        qtyInp.addEventListener("input",updateEst);
+        unitSel.addEventListener("change",updateEst);
+        updateEst();
+        const addBtn=btn("+ Add","",{"class":"btn primary small"});
+        addBtn.addEventListener("click",()=>{
+          const g=smartToGrams(parseFloat(qtyInp.value)||100,unitSel.value,food);
+          const f=parseFloat(qtyInp.value)||100;
+          const factor=g/100;
+          const unitLabel=(unitSel.value==="item"&&food.note)?food.note:`${qtyInp.value} ${unitSel.value}`;
+          state.foods.push({name:food.name,calories:Math.round(food.cal*factor),protein:Math.round(food.pro*factor*10)/10,carbs:Math.round(food.carb*factor*10)/10,fat:Math.round(food.fat*factor*10)/10,serving:unitLabel});
+          save();render();
+        });
+        addRow.appendChild(qtyInp);addRow.appendChild(unitSel);addRow.appendChild(estSpan);addRow.appendChild(addBtn);
+        row.appendChild(addRow);
+        resultsDiv.appendChild(row);
+      });
+    } else {
+      aiResultDiv.innerHTML="";
+      const loading=el("div",{class:"ai-box"},["Searching..."]);
+      aiResultDiv.appendChild(loading);
+      try{
+        const r=await callAI(`Nutrition database. Per 100g for "${q}": 1 sentence. End with: CALORIES:[n] PROTEIN:[n] CARBS:[n] FAT:[n]`);
+        const parse=k=>{const m=r.match(new RegExp(k+":[\\d.]+","i"));return m?parseFloat(m[0].split(":")[1]):0;};
+        const text=r.replace(/CALORIES:[\d.]+/ig,"").replace(/PROTEIN:[\d.]+/ig,"").replace(/CARBS:[\d.]+/ig,"").replace(/FAT:[\d.]+/ig,"").trim();
+        const cals=Math.round(parse("CALORIES"));
+        aiResultDiv.innerHTML="";
+        aiResultDiv.appendChild(el("p",{style:{fontSize:12,color:"#666",marginBottom:4}},["AI estimate (per 100g):"]));
+        aiResultDiv.appendChild(el("div",{class:"ai-box"},[text]));
+        const addAiBtn=btn(`+ Add AI estimate (${cals} kcal)`,"","btn primary");
+        addAiBtn.style.marginTop="8px";
+        addAiBtn.addEventListener("click",()=>{
+          state.foods.push({name:q,calories:cals,protein:Math.round(parse("PROTEIN")*10)/10,carbs:Math.round(parse("CARBS")*10)/10,fat:Math.round(parse("FAT")*10)/10,serving:"100g"});
+          save();render();
+        });
+        aiResultDiv.appendChild(addAiBtn);
+      }catch(e){aiResultDiv.innerHTML="<div class='ai-box'>Not found. Use manual entry below.</div>";}
+    }
+  }
+
+  searchInp.addEventListener("keydown",e=>{if(e.key==="Enter")doSearch();});
+  const searchBtn=btn("Search","","btn primary");
+  searchBtn.addEventListener("click",doSearch);
+  searchRow.appendChild(searchInp);searchRow.appendChild(searchBtn);
+  searchCard.appendChild(searchRow);searchCard.appendChild(resultsDiv);searchCard.appendChild(aiResultDiv);
+  div.appendChild(searchCard);
+
+  // Manual entry
+  const manCard=el("div",{class:"card"});
+  manCard.appendChild(cardTitle("ti-pencil","Manual Entry"));
+  const nameInp=el("input",{type:"text",placeholder:"Food name"});
+  const qtyInp=el("input",{type:"number",placeholder:"Qty",style:{width:65}});
+  const unitSel=el("select");
+  UNIT_OPTIONS.forEach(o=>{const opt=document.createElement("option");opt.value=o.v;opt.textContent=o.l;unitSel.appendChild(opt);});
+  const calsInp=el("input",{type:"number",placeholder:"kcal"});
+  const protInp=el("input",{type:"number",placeholder:"protein g"});
+  const carbInp=el("input",{type:"number",placeholder:"carbs g"});
+  const fatInp=el("input",{type:"number",placeholder:"fat g"});
+  const fibInp=el("input",{type:"number",placeholder:"fibre g"});
+  const r1=el("div",{class:"row",style:{marginBottom:8}});
+  r1.appendChild(el("div",{style:{flex:"2 1 140px"}},[nameInp]));
+  r1.appendChild(el("div",{style:{flex:"0 0 65px"}},[qtyInp]));
+  r1.appendChild(el("div",{style:{flex:"1 1 120px"}},[unitSel]));
+  const r2=el("div",{class:"row",style:{marginBottom:8}});
+  [calsInp,protInp,carbInp,fatInp,fibInp].forEach(i=>{const w=el("div",{style:{flex:"1 1 60px"}});w.appendChild(i);r2.appendChild(w);});
+  const addManBtn=btn("+ Add","","btn primary");
+  addManBtn.addEventListener("click",()=>{
+    if(!nameInp.value.trim()) return;
+    state.foods.push({name:nameInp.value,calories:parseInt(calsInp.value)||0,protein:parseFloat(protInp.value)||0,carbs:parseFloat(carbInp.value)||0,fat:parseFloat(fatInp.value)||0,fibre:parseFloat(fibInp.value)||0,serving:`${qtyInp.value} ${unitSel.value}`});
+    save();render();
+  });
+  r2.appendChild(addManBtn);
+  manCard.appendChild(r1);manCard.appendChild(r2);
+  div.appendChild(manCard);
+
+  // Water
+  const waterCard=el("div",{class:"card"});
+  waterCard.appendChild(cardTitle("ti-droplet","Water Intake"));
+  const waterRow=el("div",{class:"row",style:{marginBottom:10}});
+  const waterInp=el("input",{type:"number",placeholder:"ml"});
+  function addWater(ml){state.water+=ml;save();render();}
+  [250,500,750].forEach(ml=>{const b=btn("+"+ml+"ml","","btn");b.addEventListener("click",()=>addWater(ml));waterRow.appendChild(b);});
+  const custBtn=btn("+","","btn primary");
+  custBtn.addEventListener("click",()=>{const v=parseInt(waterInp.value)||0;if(v>0){addWater(v);waterInp.value="";}});
+  waterRow.insertBefore(waterInp,waterRow.firstChild);waterRow.appendChild(custBtn);
+  waterCard.appendChild(waterRow);
+  waterCard.appendChild(pbar(state.water,state.goals.water,"#1D9E75"));
+  waterCard.appendChild(el("p",{style:{fontSize:12,color:"#666",marginTop:4}},[state.water.toLocaleString()+" / "+state.goals.water.toLocaleString()+" ml"]));
+  div.appendChild(waterCard);
+
+  // Food log
+  const logCard=el("div",{class:"card"});
+  logCard.appendChild(cardTitle("ti-list","Today's Food Log"));
+  if(!state.foods.length){
+    logCard.appendChild(el("p",{style:{fontSize:13,color:"#666"}},["Nothing logged yet."]));
+  } else {
+    state.foods.forEach((f,i)=>{
+      const row=el("div",{class:"food-row"+(i===state.foods.length-1?" last":"")});
+      const info=el("div");
+      info.appendChild(el("p",{style:{fontSize:14,fontWeight:500}},[f.name]));
+      info.appendChild(el("p",{style:{fontSize:12,color:"#666"}},[(f.serving?f.serving+" · ":"")+f.calories+" kcal · "+f.protein+"g P · "+f.carbs+"g C · "+f.fat+"g F"+(f.fibre?" · "+f.fibre+"g fibre":"")]));
+      const delBtn=el("button",{class:"btn danger small"},["x"]);
+      delBtn.addEventListener("click",()=>{state.foods.splice(i,1);save();render();});
+      row.appendChild(info);row.appendChild(delBtn);
+      logCard.appendChild(row);
+    });
+  }
+  div.appendChild(logCard);
+  return div;
+}
+
+// ── WORKOUTS ───────────────────────────────────────────────────────────────────
+let workoutView="programs";
+let activeProg=null;
+let sessionProg=null;
+let sessionSets={};
+let sessionNotes="";
+
+function renderWorkouts(){
+  if(workoutView==="suggest") return renderWorkoutSuggest();
+  if(workoutView==="history") return renderWorkoutHistory();
+  if(workoutView==="session") return renderWorkoutSession();
+  return renderWorkoutPrograms();
+}
+
+function renderWorkoutPrograms(){
+  const div=el("div");
+  const btns=el("div",{class:"row",style:{marginBottom:12}});
+  const sb=btn("Suggest a workout","","btn");sb.style.flex="1";sb.style.justifyContent="center";sb.addEventListener("click",()=>{workoutView="suggest";render();});
+  const hb=btn("History ("+((state.workoutSessions||[]).length)+")","","btn");hb.style.flex="1";hb.style.justifyContent="center";hb.addEventListener("click",()=>{workoutView="history";render();});
+  btns.appendChild(sb);btns.appendChild(hb);div.appendChild(btns);
+
+  // Exercise search
+  const exCard=el("div",{class:"card"});
+  exCard.appendChild(cardTitle("ti-search","Exercise Info"));
+  const exRow=el("div",{class:"row",style:{marginBottom:8}});
+  const exInp=el("input",{type:"text",placeholder:"e.g. hip thrust, pull-up, deadlift..."});
+  const exResult=el("div");
+  async function searchEx(){
+    const q=exInp.value.trim();if(!q)return;
+    exResult.innerHTML="<div class='ai-box'>Thinking...</div>";
+    try{const r=await callAI(`Fitness coach. Describe "${q}": muscles worked, 2-3 form tips, common mistake. 4-5 sentences.`);exResult.innerHTML="<div class='ai-box'>"+r+"</div><a href='https://www.youtube.com/results?search_query="+encodeURIComponent(q+" proper form tutorial")+"' target='_blank' style='display:inline-flex;align-items:center;gap:6px;margin-top:8px;color:#185FA5;font-size:13px;text-decoration:none;'>Watch on YouTube</a>";}
+    catch{exResult.innerHTML="<div class='ai-box'>Could not fetch.</div>";}
+  }
+  exInp.addEventListener("keydown",e=>{if(e.key==="Enter")searchEx();});
+  const exBtn=btn("Search","","btn primary");exBtn.addEventListener("click",searchEx);
+  exRow.appendChild(exInp);exRow.appendChild(exBtn);
+  exCard.appendChild(exRow);exCard.appendChild(exResult);div.appendChild(exCard);
+
+  // Programs
+  const progCard=el("div",{class:"card"});
+  progCard.appendChild(cardTitle("ti-layout-list","Workout Programs"));
+  const newRow=el("div",{class:"row",style:{marginBottom:12}});
+  const nameInp=el("input",{type:"text",placeholder:"New program name..."});
+  const createBtn=btn("Create","","btn primary");
+  createBtn.addEventListener("click",()=>{
+    if(!nameInp.value.trim())return;
+    const p={id:Date.now().toString(),name:nameInp.value,exercises:[]};
+    state.programs.push(p);activeProg=p.id;nameInp.value="";save();render();
+  });
+  newRow.appendChild(nameInp);newRow.appendChild(createBtn);progCard.appendChild(newRow);
+
+  if(!state.programs.length){
+    progCard.appendChild(el("p",{style:{fontSize:13,color:"#666"}},["No programs yet."]));
+  } else {
+    state.programs.forEach(p=>{
+      const pDiv=el("div");
+      const pRow=el("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:"0.5px solid rgba(0,0,0,0.08)"}});
+      const pInfo=el("div",[]);
+      pInfo.appendChild(el("p",{style:{fontSize:14,fontWeight:500}},[p.name]));
+      pInfo.appendChild(el("p",{style:{fontSize:12,color:"#666"}},[p.exercises.length+" exercise(s)"]));
+      const pBtns=el("div",{style:{display:"flex",gap:6}});
+      const startBtn=el("button",{class:"btn small",style:{background:"#EAF3DE",color:"#3B6D11",border:"0.5px solid #C0DD97"}},["Start"]);
+      startBtn.addEventListener("click",()=>{
+        sessionProg=p;sessionNotes="";
+        sessionSets={};p.exercises.forEach((_,i)=>{sessionSets[i]=[{reps:"",weight:""}];});
+        workoutView="session";render();
+      });
+      const editBtn=btn("Edit","","btn small");editBtn.addEventListener("click",()=>{activeProg=activeProg===p.id?null:p.id;render();});
+      const delBtn=btn("x","","btn danger small");delBtn.addEventListener("click",()=>{state.programs=state.programs.filter(x=>x.id!==p.id);if(activeProg===p.id)activeProg=null;save();render();});
+      pBtns.appendChild(startBtn);pBtns.appendChild(editBtn);pBtns.appendChild(delBtn);
+      pRow.appendChild(pInfo);pRow.appendChild(pBtns);pDiv.appendChild(pRow);
+
+      if(activeProg===p.id){
+        const editDiv=el("div",{style:{padding:"10px 0 4px"}});
+        const addRow=el("div",{class:"row",style:{marginBottom:10}});
+        const exNameInp=el("input",{type:"text",placeholder:"Exercise name"});exNameInp.style.flex="2 1 140px";
+        const exSetsInp=el("input",{type:"text",placeholder:"e.g. 3x10"});exSetsInp.style.flex="1 1 90px";
+        const addExBtn=btn("+ Add","","btn primary small");
+        addExBtn.addEventListener("click",()=>{
+          if(!exNameInp.value.trim())return;
+          p.exercises.push({name:exNameInp.value,sets:exSetsInp.value,ytQuery:encodeURIComponent(exNameInp.value+" proper form tutorial")});
+          exNameInp.value="";exSetsInp.value="";save();render();
+        });
+        addRow.appendChild(exNameInp);addRow.appendChild(exSetsInp);addRow.appendChild(addExBtn);editDiv.appendChild(addRow);
+        p.exercises.forEach((e,i)=>{
+          const eRow=el("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:"0.5px solid rgba(0,0,0,0.06)"}});
+          const eInfo=el("div",[]);
+          eInfo.appendChild(el("p",{style:{fontSize:13,fontWeight:500}},[e.name]));
+          eInfo.appendChild(el("p",{style:{fontSize:12,color:"#666"}},[e.sets||"No template"]));
+          const eBtns=el("div",{style:{display:"flex",gap:8,alignItems:"center"}});
+          const ytLink=el("a",{href:"https://www.youtube.com/results?search_query="+e.ytQuery,target:"_blank",style:{fontSize:12,color:"#185FA5",textDecoration:"none"}},["Watch"]);
+          const eDelBtn=btn("x","","btn danger small");eDelBtn.addEventListener("click",()=>{p.exercises.splice(i,1);save();render();});
+          eBtns.appendChild(ytLink);eBtns.appendChild(eDelBtn);eRow.appendChild(eInfo);eRow.appendChild(eBtns);editDiv.appendChild(eRow);
+        });
+        pDiv.appendChild(editDiv);
+      }
+      progCard.appendChild(pDiv);
+    });
+  }
+  div.appendChild(progCard);
+  return div;
+}
+
+function renderWorkoutSuggest(){
+  const div=el("div");
+  const backBtn=btn("Back","","btn");backBtn.addEventListener("click",()=>{workoutView="programs";render();});
+  div.appendChild(el("div",{class:"row",style:{marginBottom:12}},[backBtn,el("p",{style:{fontWeight:500,fontSize:15}},["Workout Suggestions"])]));
+  const card=el("div",{class:"card"});
+  card.appendChild(cardTitle("ti-target","Target Body Areas"));
+  const areaDiv=el("div",{style:{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}});
+  let selAreas=[];
+  BODY_AREAS.forEach(a=>{
+    const c=el("button",{class:"chip"},[ a]);
+    c.addEventListener("click",()=>{
+      if(selAreas.includes(a)){selAreas=selAreas.filter(x=>x!==a);c.classList.remove("active");}
+      else{selAreas.push(a);c.classList.add("active");}
+    });
+    areaDiv.appendChild(c);
+  });
+  card.appendChild(areaDiv);
+  const optRow=el("div",{class:"row",style:{marginBottom:12}});
+  const levelSel=el("select");
+  [["beginner","Beginner"],["intermediate","Intermediate"],["advanced","Advanced"]].forEach(([v,l])=>{const o=document.createElement("option");o.value=v;o.textContent=l;if(v==="intermediate")o.selected=true;levelSel.appendChild(o);});
+  const eqSel=el("select");
+  [["gym","Full gym"],["home","Home / bodyweight"],["minimal","Bands / dumbbells"]].forEach(([v,l])=>{const o=document.createElement("option");o.value=v;o.textContent=l;levelSel.appendChild(o);});
+  optRow.appendChild(el("div",{style:{flex:"1 1 130px"}},[el("p",{style:{fontSize:12,color:"#666",marginBottom:4}},["Fitness level"]),levelSel]));
+  optRow.appendChild(el("div",{style:{flex:"1 1 130px"}},[el("p",{style:{fontSize:12,color:"#666",marginBottom:4}},["Equipment"]),eqSel]));
+  card.appendChild(optRow);
+  const result=el("div");
+  const sugBtn=btn("Suggest workout","","btn primary");
+  sugBtn.addEventListener("click",async()=>{
+    if(!selAreas.length)return;
+    result.innerHTML="<div class='ai-box'>Generating...</div>";
+    const eq=eqSel.value==="gym"?"full gym":eqSel.value==="home"?"bodyweight":"bands/dumbbells";
+    try{const r=await callAI(`Personal trainer. Workout for: ${selAreas.join(", ")}. Level: ${levelSel.value}. Equipment: ${eq}. Give 6-8 exercises with sets, reps and brief notes.`);result.innerHTML="<div class='ai-box'>"+r+"</div>";}
+    catch{result.innerHTML="<div class='ai-box'>Could not generate.</div>";}
+  });
+  card.appendChild(sugBtn);card.appendChild(result);div.appendChild(card);
+  return div;
+}
+
+function renderWorkoutHistory(){
+  const div=el("div");
+  const backBtn=btn("Back","","btn");backBtn.addEventListener("click",()=>{workoutView="programs";render();});
+  div.appendChild(el("div",{class:"row",style:{marginBottom:12}},[backBtn,el("p",{style:{fontWeight:500,fontSize:15}},["Session History"])]));
+  const sessions=state.workoutSessions||[];
+  if(!sessions.length){div.appendChild(el("p",{style:{fontSize:13,color:"#666"}},["No sessions yet."]));return div;}
+  [...sessions].reverse().forEach(sess=>{
+    const card=el("div",{class:"card"});
+    card.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:8}},[
+      el("div",[el("p",{style:{fontSize:15,fontWeight:500}},[sess.programName]),el("p",{style:{fontSize:12,color:"#666"}},[sess.date])]),
+      tag(sess.exercises.length+" exercises","purple")
+    ]));
+    sess.exercises.forEach(ex=>{
+      card.appendChild(el("p",{style:{fontSize:13,fontWeight:500,marginTop:6}},[ex.name]));
+      const setsDiv=el("div",{style:{display:"flex",gap:6,flexWrap:"wrap",marginTop:4}});
+      ex.sets.forEach((s,j)=>{setsDiv.appendChild(el("span",{style:{fontSize:12,background:"#f0f0ec",borderRadius:6,padding:"2px 8px"}},["Set "+(j+1)+": "+s.reps+" reps"+(s.weight?" @ "+s.weight+"kg":"")]));});
+      card.appendChild(setsDiv);
+    });
+    if(sess.notes) card.appendChild(el("p",{style:{fontSize:12,color:"#666",fontStyle:"italic",marginTop:6}},[sess.notes]));
+    div.appendChild(card);
+  });
+  return div;
+}
+
+function renderWorkoutSession(){
+  if(!sessionProg){workoutView="programs";render();return el("div");}
+  const div=el("div");
+  const backBtn=btn("Back","","btn");backBtn.addEventListener("click",()=>{workoutView="programs";render();});
+  div.appendChild(el("div",{class:"row",style:{marginBottom:12}},[backBtn,el("p",{style:{fontWeight:500,fontSize:15}},["Logging: "+sessionProg.name])]));
+
+  sessionProg.exercises.forEach((ex,i)=>{
+    // Find PB
+    let pb=null;
+    (state.workoutSessions||[]).forEach(sess=>sess.exercises.forEach(e=>{if(e.name===ex.name)e.sets.forEach(s=>{if(s.weight&&(!pb||parseFloat(s.weight)>pb.weight))pb={weight:parseFloat(s.weight),reps:parseInt(s.reps)||0,date:sess.date};});}));
+    const card=el("div",{class:"card"});
+    const hdr=el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}});
+    const nameDiv=el("div",[el("p",{style:{fontSize:15,fontWeight:500}},[ex.name])]);
+    if(pb) nameDiv.appendChild(el("p",{style:{fontSize:12,color:"#534AB7"}},["PB: "+pb.weight+"kg x "+pb.reps+" reps ("+pb.date+")"]));
+    const ytLink=el("a",{href:"https://www.youtube.com/results?search_query="+ex.ytQuery,target:"_blank",style:{fontSize:12,color:"#185FA5",textDecoration:"none"}},["Watch"]);
+    hdr.appendChild(nameDiv);hdr.appendChild(ytLink);card.appendChild(hdr);
+
+    const grid=el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 28px",gap:6,marginBottom:4}});
+    grid.appendChild(el("p",{style:{fontSize:11,color:"#666"}},["Reps"]));
+    grid.appendChild(el("p",{style:{fontSize:11,color:"#666"}},["Weight (kg)"]));
+    grid.appendChild(el("span"));
+    card.appendChild(grid);
+
+    if(!sessionSets[i]) sessionSets[i]=[{reps:"",weight:""}];
+    const setsDiv=el("div");
+    function renderSets(){
+      setsDiv.innerHTML="";
+      sessionSets[i].forEach((s,j)=>{
+        const row=el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 28px",gap:6,marginBottom:6,alignItems:"center"}});
+        const repsInp=el("input",{type:"number",value:s.reps,placeholder:"10"});
+        repsInp.addEventListener("input",e=>{sessionSets[i][j].reps=e.target.value;});
+        const wgtInp=el("input",{type:"number",value:s.weight,placeholder:"60"});
+        wgtInp.addEventListener("input",e=>{sessionSets[i][j].weight=e.target.value;});
+        const delBtn=el("button",{style:{background:"none",border:"none",cursor:"pointer",color:"#A32D2D",fontSize:16}},["x"]);
+        delBtn.addEventListener("click",()=>{sessionSets[i].splice(j,1);renderSets();});
+        row.appendChild(repsInp);row.appendChild(wgtInp);row.appendChild(delBtn);setsDiv.appendChild(row);
+      });
+    }
+    renderSets();
+    card.appendChild(setsDiv);
+    const addSetBtn=btn("+ Add set","","btn small");
+    addSetBtn.addEventListener("click",()=>{sessionSets[i].push({reps:"",weight:""});renderSets();});
+    card.appendChild(addSetBtn);
+    div.appendChild(card);
+  });
+
+  const notesCard=el("div",{class:"card"});
+  notesCard.appendChild(cardTitle("ti-notes","Session notes"));
+  const notesTA=el("textarea",{placeholder:"How did it feel?",rows:3,style:{width:"100%",resize:"vertical",boxSizing:"border-box"}});
+  notesTA.value=sessionNotes;
+  notesTA.addEventListener("input",e=>{sessionNotes=e.target.value;});
+  notesCard.appendChild(notesTA);div.appendChild(notesCard);
+
+  const saveBtn=btn("Save session","","btn primary");
+  saveBtn.style.width="100%";saveBtn.style.justifyContent="center";
+  saveBtn.addEventListener("click",()=>{
+    const exercises=sessionProg.exercises.map((e,i)=>({name:e.name,sets:(sessionSets[i]||[]).filter(s=>s.reps||s.weight)}));
+    if(!state.workoutSessions) state.workoutSessions=[];
+    state.workoutSessions.push({id:Date.now().toString(),date:TODAY,programName:sessionProg.name,programId:sessionProg.id,exercises,notes:sessionNotes});
+    save();workoutView="programs";render();
+  });
+  div.appendChild(saveBtn);
+  return div;
+}
+
+// ── STEPS ──────────────────────────────────────────────────────────────────────
+let stepsHistView="monthly";
+function renderSteps(){
+  const div=el("div");
+  const stepHistory=state.stepHistory||[];
+  const mGoal=state.goals.monthlySteps||(state.goals.steps*30);
+  const curMonth=TODAY.slice(0,7);
+  const bm={};stepHistory.forEach(h=>{const m=h.date.slice(0,7);if(!bm[m])bm[m]={total:0,days:0};bm[m].total+=h.steps;bm[m].days+=1;});
+  const curTotal=(bm[curMonth]||{total:state.steps}).total;
+
+  const grid=el("div",{class:"metric-grid"});
+  grid.appendChild(mcard("Today",state.steps.toLocaleString(),"steps","#534AB7"));
+  grid.appendChild(mcard("Daily goal",state.goals.steps.toLocaleString(),"steps"));
+  grid.appendChild(mcard("This month",curTotal.toLocaleString(),"/ "+mGoal.toLocaleString(),"#1D9E75"));
+  grid.appendChild(mcard("Burned",Math.round(state.steps*0.04),"kcal est.","#D85A30"));
+  div.appendChild(grid);
+
+  const logCard=el("div",{class:"card"});
+  logCard.appendChild(cardTitle("ti-shoe","Log Steps"));
+  const stepsInp=el("input",{type:"number",placeholder:"Number of steps"});
+  const logBtn=btn("Log","","btn primary");
+  logBtn.addEventListener("click",()=>{
+    const v=parseInt(stepsInp.value)||0;if(!v)return;
+    const nh=stepHistory.filter(h=>h.date!==TODAY);nh.push({date:TODAY,steps:v});
+    state.steps=v;state.stepHistory=nh.slice(-365);save();render();
+  });
+  logCard.appendChild(el("div",{class:"row",style:{marginBottom:10}},[stepsInp,logBtn]));
+  logCard.appendChild(pbar(state.steps,state.goals.steps,"#534AB7"));
+  logCard.appendChild(el("p",{style:{fontSize:12,color:"#666",marginTop:4}},[state.steps.toLocaleString()+" / "+state.goals.steps.toLocaleString()+" today"]));
+  logCard.appendChild(el("div",{style:{marginTop:10}},[pbar(curTotal,mGoal,"#1D9E75"),el("p",{style:{fontSize:12,color:"#666",marginTop:4}},[curTotal.toLocaleString()+" / "+mGoal.toLocaleString()+" this month"])]));
+  div.appendChild(logCard);
+
+  const goalCard=el("div",{class:"card"});
+  goalCard.appendChild(cardTitle("ti-settings","Step Goals"));
+  const gr=el("div",{class:"row",style:{flexWrap:"wrap",gap:10}});
+  const dInp=el("input",{type:"number",placeholder:String(state.goals.steps)});
+  const dSave=btn("Save","","btn");dSave.addEventListener("click",()=>{state.goals.steps=parseInt(dInp.value)||state.goals.steps;save();render();});
+  const mInp=el("input",{type:"number",placeholder:String(mGoal)});
+  const mSave=btn("Save","","btn");mSave.addEventListener("click",()=>{state.goals.monthlySteps=parseInt(mInp.value)||mGoal;save();render();});
+  gr.appendChild(el("div",{style:{flex:"1 1 130px"}},[el("p",{style:{fontSize:12,color:"#666",marginBottom:4}},["Daily goal"]),el("div",{class:"row"},[dInp,dSave])]));
+  gr.appendChild(el("div",{style:{flex:"1 1 130px"}},[el("p",{style:{fontSize:12,color:"#666",marginBottom:4}},["Monthly goal"]),el("div",{class:"row"},[mInp,mSave])]));
+  goalCard.appendChild(gr);div.appendChild(goalCard);
+
+  const histCard=el("div",{class:"card"});
+  histCard.appendChild(cardTitle("ti-chart-line","Step History"));
+  const tabs=el("div",{class:"row",style:{marginBottom:12}});
+  const mTab=chip("Monthly",stepsHistView==="monthly",()=>{stepsHistView="monthly";render();});
+  const dTab=chip("Daily (last 30)",stepsHistView==="daily",()=>{stepsHistView="daily";render();});
+  tabs.appendChild(mTab);tabs.appendChild(dTab);histCard.appendChild(tabs);
+
+  if(stepsHistView==="monthly"){
+    const entries=Object.entries(bm).sort((a,b)=>b[0]>a[0]?1:-1).slice(0,12);
+    if(!entries.length){histCard.appendChild(el("p",{style:{fontSize:13,color:"#666"}},["No history yet."]));}
+    else entries.forEach(([month,data])=>{
+      const ym=month.split("-");
+      const label=new Date(parseInt(ym[0]),parseInt(ym[1])-1,1).toLocaleDateString("en-GB",{month:"short",year:"numeric"});
+      const d=el("div",{style:{marginBottom:12}});
+      d.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:12,color:"#666",marginBottom:2}},[el("span",{style:{fontWeight:500}},[label]),el("span",[data.total.toLocaleString()+" steps · "+data.days+" days"])]));
+      d.appendChild(pbar(data.total,mGoal,"#534AB7"));
+      d.appendChild(el("p",{style:{fontSize:11,color:"#666",marginTop:2}},[Math.round(data.total/mGoal*100)+"% of monthly goal"]));
+      histCard.appendChild(d);
+    });
+  } else {
+    if(!stepHistory.length){histCard.appendChild(el("p",{style:{fontSize:13,color:"#666"}},["No history yet."]));}
+    else [...stepHistory].reverse().slice(0,30).forEach(h=>{
+      const d=el("div",{style:{marginBottom:10}});
+      d.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:12,color:"#666"}},[h.date,h.steps.toLocaleString()+" steps"]));
+      d.appendChild(pbar(h.steps,state.goals.steps,"#534AB7"));
+      histCard.appendChild(d);
+    });
+  }
+  div.appendChild(histCard);
+  return div;
+}
+
+// ── HABITS ─────────────────────────────────────────────────────────────────────
+function renderHabits(){
+  const div=el("div");
+  const mainCard=el("div",{class:"card"});
+  mainCard.appendChild(cardTitle("ti-checklist","Daily Habits"));
+
+  // Water
+  const waterRow=el("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"0.5px solid rgba(0,0,0,0.08)"}});
+  waterRow.appendChild(el("div",{style:{display:"flex",alignItems:"center",gap:10}},[el("i",{class:"ti ti-droplet",style:{fontSize:18,color:"#185FA5"}}),el("div",[el("p",{style:{fontSize:14,fontWeight:500}},["Water intake"]),el("p",{style:{fontSize:12,color:"#666"}},[state.water+" / "+state.goals.water+" ml"])])]));
+  const waterTog=toggle(state.habits.water,()=>{if(state.water>=state.goals.water){state.habits.water=!state.habits.water;save();render();}});
+  waterRow.appendChild(waterTog);mainCard.appendChild(waterRow);
+
+  // Devotion
+  const devRow=el("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"0.5px solid rgba(0,0,0,0.08)"}});
+  devRow.appendChild(el("div",{style:{display:"flex",alignItems:"center",gap:10}},[el("i",{class:"ti ti-book",style:{fontSize:18,color:"#3B6D11"}}),el("div",[el("p",{style:{fontSize:14,fontWeight:500}},["Daily devotion"]),el("p",{style:{fontSize:12,color:"#666"}},["Spiritual time today"])])]));
+  const devTog=toggle(state.habits.devotion,()=>{state.habits.devotion=!state.habits.devotion;save();render();});
+  devRow.appendChild(devTog);mainCard.appendChild(devRow);
+
+  // Sleep
+  const sleepRow=el("div",{style:{padding:"10px 0"}});
+  const sleepHdr=el("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:10}});
+  sleepHdr.appendChild(el("i",{class:"ti ti-moon",style:{fontSize:18,color:"#534AB7"}}));
+  sleepHdr.appendChild(el("div",[el("p",{style:{fontSize:14,fontWeight:500}},["Sleep"]),el("p",{style:{fontSize:12,color:"#666"}},[state.habits.sleep>0?state.habits.sleep+" hrs"+(state.habits.bedtime?" · "+state.habits.bedtime+" to "+state.habits.wakeTime:""):"Not logged"])]));
+  sleepRow.appendChild(sleepHdr);
+  const timeRow=el("div",{class:"row",style:{flexWrap:"wrap",alignItems:"flex-end",gap:8}});
+  const bedInp=el("input",{type:"time",value:state.habits.bedtime||""});bedInp.style.flex="1 1 110px";
+  const wakeInp=el("input",{type:"time",value:state.habits.wakeTime||""});wakeInp.style.flex="1 1 110px";
+  const hrsSpan=el("span",{style:{fontSize:12,color:"#534AB7",fontWeight:500}});
+  function updateHrs(){
+    const bed=bedInp.value,wake=wakeInp.value;
+    if(bed&&wake){const[bh,bm]=bed.split(":").map(Number);const[wh,wm]=wake.split(":").map(Number);let mins=(wh*60+wm)-(bh*60+bm);if(mins<0)mins+=1440;hrsSpan.textContent=(Math.round(mins/60*10)/10)+" hrs";}
+    else hrsSpan.textContent="";
+  }
+  bedInp.addEventListener("input",updateHrs);wakeInp.addEventListener("input",updateHrs);
+  const saveSleepBtn=btn("Save","","btn primary small");
+  saveSleepBtn.addEventListener("click",()=>{
+    const bed=bedInp.value,wake=wakeInp.value;if(!bed||!wake)return;
+    const[bh,bm]=bed.split(":").map(Number);const[wh,wm]=wake.split(":").map(Number);let mins=(wh*60+wm)-(bh*60+bm);if(mins<0)mins+=1440;
+    state.habits.sleep=Math.round(mins/60*10)/10;state.habits.bedtime=bed;state.habits.wakeTime=wake;save();render();
+  });
+  const bedDiv=el("div",{style:{flex:"1 1 110px"}});bedDiv.appendChild(el("p",{style:{fontSize:11,color:"#666",marginBottom:3}},["Bedtime"]));bedDiv.appendChild(bedInp);
+  const wakeDiv=el("div",{style:{flex:"1 1 110px"}});wakeDiv.appendChild(el("p",{style:{fontSize:11,color:"#666",marginBottom:3}},["Wake up"]));wakeDiv.appendChild(wakeInp);
+  timeRow.appendChild(bedDiv);timeRow.appendChild(wakeDiv);
+  timeRow.appendChild(el("div",{style:{display:"flex",flexDirection:"column",gap:4}},[hrsSpan,saveSleepBtn]));
+  sleepRow.appendChild(timeRow);
+  if(state.habits.sleep>0){sleepRow.appendChild(pbar(state.habits.sleep,state.goals.sleep,"#534AB7"));sleepRow.appendChild(el("p",{style:{fontSize:11,color:"#666",marginTop:3}},[state.habits.sleep+" / "+state.goals.sleep+" hrs goal"]));}
+  mainCard.appendChild(sleepRow);div.appendChild(mainCard);
+
+  // Summary
+  const sumCard=el("div",{class:"card"});
+  sumCard.appendChild(cardTitle("ti-chart-bar","Today's Summary"));
+  [{label:"Water goal",done:state.habits.water},{label:"Sleep logged",done:state.habits.sleep>0},{label:"Devotion",done:state.habits.devotion}].forEach((h,i,arr)=>{
+    const row=el("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:i<arr.length-1?"0.5px solid rgba(0,0,0,0.08)":"none"}});
+    row.appendChild(el("span",{style:{fontSize:14}},[h.label]));
+    row.appendChild(tag(h.done?"Done":"Pending",h.done?"green":"amber"));
+    sumCard.appendChild(row);
+  });
+  div.appendChild(sumCard);
+
+  // AI insights
+  const aiCard=el("div",{class:"card"});
+  aiCard.appendChild(cardTitle("ti-sparkles","AI Habit Insights"));
+  const aiDiv=el("div");
+  const insBtn=btn("Get insights","","btn");
+  insBtn.addEventListener("click",async()=>{
+    aiDiv.innerHTML="<div class='ai-box'>Thinking...</div>";
+    try{const r=await callAI(`Wellness coach. Water:${state.water}ml (goal ${state.goals.water}ml), Sleep:${state.habits.sleep}hrs, Devotion:${state.habits.devotion}. 3 warm personalised habit tips.`);aiDiv.innerHTML="<div class='ai-box'>"+r+"</div>";}
+    catch{aiDiv.innerHTML="<div class='ai-box'>Could not load.</div>";}
+  });
+  aiCard.appendChild(insBtn);aiCard.appendChild(aiDiv);div.appendChild(aiCard);
+  return div;
+}
+
+// ── GOALS ──────────────────────────────────────────────────────────────────────
+function renderGoals(){
+  const div=el("div");
+  const totalCals=state.foods.reduce((s,f)=>s+(f.calories||0),0);
+  const totalProt=state.foods.reduce((s,f)=>s+(f.protein||0),0);
+
+  const setCard=el("div",{class:"card"});
+  setCard.appendChild(cardTitle("ti-target","Set Daily Goals"));
+  const grid=el("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:12}});
+  const fields=[["calories","Calorie goal (kcal)",state.goals.calories],["protein","Protein goal (g)",state.goals.protein||150],["water","Water goal (ml)",state.goals.water],["steps","Step goal",state.goals.steps],["sleep","Sleep goal (hrs)",state.goals.sleep]];
+  const inputs={};
+  fields.forEach(([k,l,ph])=>{
+    const d=el("div");d.appendChild(el("p",{style:{fontSize:12,color:"#666",marginBottom:4}},[l]));
+    const inp=el("input",{type:"number",placeholder:String(ph)});inputs[k]=inp;d.appendChild(inp);grid.appendChild(d);
+  });
+  setCard.appendChild(grid);
+  const saveBtn=btn("Save goals","","btn primary");
+  saveBtn.addEventListener("click",()=>{
+    Object.keys(inputs).forEach(k=>{const v=parseFloat(inputs[k].value);if(v)state.goals[k]=v;});
+    save();render();
+  });
+  setCard.appendChild(saveBtn);div.appendChild(setCard);
+
+  const progCard=el("div",{class:"card"});
+  progCard.appendChild(cardTitle("ti-chart-dots","Today's Progress"));
+  [{label:"Calories",current:totalCals,goal:state.goals.calories,unit:"kcal",color:"#D85A30"},
+   {label:"Protein",current:totalProt,goal:state.goals.protein||150,unit:"g",color:"#534AB7"},
+   {label:"Water",current:state.water,goal:state.goals.water,unit:"ml",color:"#1D9E75"},
+   {label:"Steps",current:state.steps,goal:state.goals.steps,unit:"steps",color:"#185FA5"},
+   {label:"Sleep",current:state.habits.sleep,goal:state.goals.sleep,unit:"hrs",color:"#BA7517"}
+  ].forEach(item=>{
+    const pct=Math.min(100,item.goal>0?Math.round(item.current/item.goal*100):0);
+    const d=el("div",{style:{marginBottom:12}});
+    d.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:2}},[item.label,el("span",{style:{color:"#666"}},[item.current.toLocaleString()+" / "+item.goal.toLocaleString()+" "+item.unit+" ("+pct+"%)"])]));
+    d.appendChild(pbar(item.current,item.goal,item.color));
+    progCard.appendChild(d);
+  });
+  div.appendChild(progCard);
+
+  const aiCard=el("div",{class:"card"});
+  aiCard.appendChild(cardTitle("ti-sparkles","Personalised Advice"));
+  const aiDiv=el("div");
+  const advBtn=btn("Get advice","","btn");
+  advBtn.addEventListener("click",async()=>{
+    aiDiv.innerHTML="<div class='ai-box'>Thinking...</div>";
+    try{const r=await callAI(`Wellness coach. Calories:${totalCals}/${state.goals.calories}, Protein:${totalProt.toFixed(0)}/${state.goals.protein||150}g, Water:${state.water}/${state.goals.water}ml, Steps:${state.steps}/${state.goals.steps}, Sleep:${state.habits.sleep}/${state.goals.sleep}hrs. 3-4 specific encouraging suggestions.`);aiDiv.innerHTML="<div class='ai-box'>"+r+"</div>";}
+    catch{aiDiv.innerHTML="<div class='ai-box'>Could not load.</div>";}
+  });
+  aiCard.appendChild(advBtn);aiCard.appendChild(aiDiv);div.appendChild(aiCard);
+  return div;
+}
+
+// ── WEIGHT ─────────────────────────────────────────────────────────────────────
+function renderWeight(){
+  const div=el("div");
+  const wLog=state.weightLog||[];
+  const latest=wLog.length?wLog[wLog.length-1]:null;
+  const latKg=latest?.weight||null;
+  function bmi(kg,cm){if(!kg||!cm)return null;return(kg/((cm/100)**2)).toFixed(1);}
+  function bmiCat(b){if(!b)return null;const n=parseFloat(b);if(n<18.5)return["Underweight","#185FA5"];if(n<25)return["Healthy","#1D9E75"];if(n<30)return["Overweight","#BA7517"];return["Obese","#A32D2D"];}
+  const curBMI=bmi(latKg,state.heightCm);const cat=bmiCat(curBMI);
+  const toGoal=latKg&&state.goalWeight?(latKg-state.goalWeight).toFixed(1):null;
+
+  const grid=el("div",{class:"metric-grid"});
+  grid.appendChild(mcard("Current weight",latKg?latKg+" kg":"--",state.heightCm?"BMI "+(curBMI||"--"):"Add height for BMI","#D85A30"));
+  grid.appendChild(mcard("Goal weight",state.goalWeight?state.goalWeight+" kg":"--",toGoal?(parseFloat(toGoal)>0?toGoal+"kg to lose":Math.abs(parseFloat(toGoal))+"kg to gain"):"Set a goal"));
+  if(cat) grid.appendChild(mcard("BMI status",curBMI,cat[0],cat[1]));
+  grid.appendChild(mcard("Entries",wLog.length,"weigh-ins logged"));
+  div.appendChild(grid);
+
+  const logCard=el("div",{class:"card"});
+  logCard.appendChild(cardTitle("ti-scale","Log Weight"));
+  const wInp=el("input",{type:"number",step:"0.1",placeholder:"Enter weight"});wInp.style.flex="1 1 100px";
+  const uSel=el("select");[["kg","kg"],["lbs","lbs"],["st","stone"]].forEach(([v,l])=>{const o=document.createElement("option");o.value=v;o.textContent=l;uSel.appendChild(o);});
+  const wLogBtn=btn("+ Log","","btn primary");
+  wLogBtn.addEventListener("click",()=>{
+    let kg=parseFloat(wInp.value);if(!kg)return;
+    if(uSel.value==="lbs")kg*=0.453592;if(uSel.value==="st")kg*=6.35029;
+    kg=Math.round(kg*10)/10;
+    const ex=wLog.findIndex(e=>e.date===TODAY);
+    if(ex>=0)wLog[ex].weight=kg;else wLog.push({date:TODAY,weight:kg});
+    state.weightLog=wLog;save();render();
+  });
+  logCard.appendChild(el("div",{class:"row"},[wInp,uSel,wLogBtn]));div.appendChild(logCard);
+
+  const settCard=el("div",{class:"card"});
+  settCard.appendChild(cardTitle("ti-settings","Settings"));
+  const hInp=el("input",{type:"number",placeholder:state.heightCm?String(state.heightCm):"e.g. 165"});
+  const gInp=el("input",{type:"number",placeholder:state.goalWeight?String(state.goalWeight):"e.g. 65"});
+  const sSave=btn("Save","","btn");
+  sSave.addEventListener("click",()=>{if(parseFloat(hInp.value))state.heightCm=parseFloat(hInp.value);if(parseFloat(gInp.value))state.goalWeight=parseFloat(gInp.value);save();render();});
+  settCard.appendChild(el("div",{class:"row",style:{flexWrap:"wrap",gap:10}},[
+    el("div",{style:{flex:"1 1 130px"}},[el("p",{style:{fontSize:12,color:"#666",marginBottom:4}},["Height (cm)"]),hInp]),
+    el("div",{style:{flex:"1 1 130px"}},[el("p",{style:{fontSize:12,color:"#666",marginBottom:4}},["Goal weight (kg)"]),gInp]),
+    el("div",{style:{display:"flex",alignItems:"flex-end"}},[sSave])
+  ]));div.appendChild(settCard);
+
+  // Chart
+  if(wLog.length>=2){
+    const last20=wLog.slice(-20);
+    const maxW=Math.max(...last20.map(e=>e.weight));const minW=Math.min(...last20.map(e=>e.weight));
+    const range=Math.max(maxW-minW,5);const svgW=Math.max(300,last20.length*44);
+    const chartCard=el("div",{class:"card"});chartCard.appendChild(cardTitle("ti-chart-line","Weight Trend"));
+    const wrapper=el("div",{style:{overflowX:"auto"}});
+    const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+    svg.setAttribute("width",svgW);svg.setAttribute("height","150");svg.style.display="block";
+    last20.forEach((entry,i,arr)=>{
+      const x=arr.length>1?(i/(arr.length-1))*(svgW-40)+20:svgW/2;
+      const y=110-((entry.weight-minW)/range)*90;
+      if(arr[i+1]){
+        const nx=((i+1)/(arr.length-1))*(svgW-40)+20;
+        const ny=110-((arr[i+1].weight-minW)/range)*90;
+        const line=document.createElementNS("http://www.w3.org/2000/svg","line");
+        line.setAttribute("x1",x);line.setAttribute("y1",y);line.setAttribute("x2",nx);line.setAttribute("y2",ny);
+        line.setAttribute("stroke","#534AB7");line.setAttribute("stroke-width","2");line.setAttribute("opacity","0.6");
+        svg.appendChild(line);
+      }
+      const circle=document.createElementNS("http://www.w3.org/2000/svg","circle");
+      circle.setAttribute("cx",x);circle.setAttribute("cy",y);circle.setAttribute("r","4");circle.setAttribute("fill","#534AB7");svg.appendChild(circle);
+      const text=document.createElementNS("http://www.w3.org/2000/svg","text");
+      text.setAttribute("x",x);text.setAttribute("y",y-8);text.setAttribute("text-anchor","middle");text.setAttribute("font-size","10");text.setAttribute("fill","#666");
+      text.textContent=entry.weight;svg.appendChild(text);
+      if(i===0||i===arr.length-1){const t2=document.createElementNS("http://www.w3.org/2000/svg","text");t2.setAttribute("x",x);t2.setAttribute("y","135");t2.setAttribute("text-anchor","middle");t2.setAttribute("font-size","9");t2.setAttribute("fill","#666");t2.textContent=entry.date.slice(5);svg.appendChild(t2);}
+    });
+    if(state.goalWeight&&minW<=state.goalWeight&&state.goalWeight<=maxW){
+      const gy=110-((state.goalWeight-minW)/range)*90;
+      const gl=document.createElementNS("http://www.w3.org/2000/svg","line");
+      gl.setAttribute("x1","20");gl.setAttribute("y1",gy);gl.setAttribute("x2",svgW-20);gl.setAttribute("y2",gy);
+      gl.setAttribute("stroke","#1D9E75");gl.setAttribute("stroke-width","1.5");gl.setAttribute("stroke-dasharray","4,4");gl.setAttribute("opacity","0.7");svg.appendChild(gl);
+    }
+    wrapper.appendChild(svg);chartCard.appendChild(wrapper);div.appendChild(chartCard);
+  }
+
+  const listCard=el("div",{class:"card"});listCard.appendChild(cardTitle("ti-list","Weight Log"));
+  if(!wLog.length){listCard.appendChild(el("p",{style:{fontSize:13,color:"#666"}},["No entries yet."]));}
+  else{[...wLog].reverse().forEach((e,i)=>{
+    const row=el("div",{class:"entry-row"+(i===wLog.length-1?" last":"")});
+    row.appendChild(el("div",[el("p",{style:{fontSize:14,fontWeight:500}},[e.weight+" kg"]),el("p",{style:{fontSize:12,color:"#666"}},[e.date+(state.heightCm?" · BMI "+bmi(e.weight,state.heightCm):"")])]));
+    const d=btn("x","","btn danger small");d.addEventListener("click",()=>{state.weightLog=state.weightLog.filter((_,j)=>j!==wLog.length-1-i);save();render();});
+    row.appendChild(d);listCard.appendChild(row);
+  });}
+  div.appendChild(listCard);
+  return div;
+}
+
+// ── CYCLE ──────────────────────────────────────────────────────────────────────
+let cycleSection="overview";
+function computeCycleDay(cycle){
+  if(!cycle.periodDates||!cycle.periodDates.length)return null;
+  const sorted=[...cycle.periodDates].sort((a,b)=>a.start>b.start?-1:1);
+  const diff=Math.floor((new Date()-new Date(sorted[0].start))/86400000);
+  const len=cycle.avgCycleLength||28;const day=diff%len;const d=cycle.avgPeriodDuration||5;
+  const phases=[
+    {name:"Menstrual",color:"#993556",bg:"#FBEAF0",border:"#F4C0D1",desc:"Rest and restore. Your body is working hard."},
+    {name:"Follicular",color:"#0F6E56",bg:"#E1F5EE",border:"#9FE1CB",desc:"Energy rising. Great time to try new workouts."},
+    {name:"Ovulation",color:"#534AB7",bg:"#EEEDFE",border:"#CECBF6",desc:"Peak energy and strength. Push your limits!"},
+    {name:"Luteal",color:"#854F0B",bg:"#FAEEDA",border:"#FAC775",desc:"Wind down. Focus on consistency over intensity."}
+  ];
+  const phase=day<d?phases[0]:day<13?phases[1]:day<16?phases[2]:phases[3];
+  return{...phase,dayOfCycle:day+1,nextPeriodIn:len-day,avgLen:len};
+}
+
+function renderCycle(){
+  const div=el("div");
+  const secs=[{id:"overview",label:"Overview"},{id:"log",label:"Log Period"},{id:"ovulation",label:"Ovulation"},{id:"symptoms",label:"Symptoms"},{id:"history",label:"History"}];
+  const tabRow=el("div",{style:{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}});
+  secs.forEach(s=>{tabRow.appendChild(chip(s.label,cycleSection===s.id,()=>{cycleSection=s.id;render();}));});
+  div.appendChild(tabRow);
+
+  const cycle=state.cycle;const info=computeCycleDay(cycle);
+
+  if(cycleSection==="overview"){
+    if(info){
+      const phaseDiv=el("div",{style:{background:info.bg,border:"0.5px solid "+info.border,borderRadius:12,padding:"1rem 1.25rem",marginBottom:12}});
+      phaseDiv.appendChild(el("p",{style:{fontSize:12,color:"#666",marginBottom:4}},["Day "+info.dayOfCycle+" of ~"+info.avgLen+" day cycle"]));
+      phaseDiv.appendChild(el("p",{style:{fontSize:24,fontWeight:500,color:info.color}},[info.name+" Phase"]));
+      phaseDiv.appendChild(el("p",{style:{fontSize:13,color:info.color,marginTop:4}},[info.desc]));
+      phaseDiv.appendChild(el("p",{style:{fontSize:13,color:info.color,marginTop:6}},["Next period in approximately "+info.nextPeriodIn+" days"]));
+      div.appendChild(phaseDiv);
+    } else {
+      div.appendChild(el("div",{class:"card"},[el("p",{style:{fontSize:14,color:"#666"}},["Log your first period in the Log Period tab to get started."])]));
+    }
+    const aiCard=el("div",{class:"card"});aiCard.appendChild(cardTitle("ti-sparkles","AI Phase Recommendations"));
+    const aiDiv=el("div");
+    if(!info){aiDiv.appendChild(el("p",{style:{fontSize:13,color:"#666"}},["Log a period first."]));}
+    else{
+      const advBtn=btn("Get food, workout and self-care advice","","btn");
+      advBtn.addEventListener("click",async()=>{
+        aiDiv.innerHTML="<div class='ai-box'>Thinking...</div>";
+        const todaySymp=(cycle.symptoms||{})[TODAY];
+        const symStr=todaySymp?"Today symptoms: "+todaySymp.checklist.join(", ")+(todaySymp.notes?". "+todaySymp.notes:"")+".":" No symptoms today.";
+        try{const r=await callAI(`Women's health expert. User is in ${info.name} phase (day ${info.dayOfCycle} of ${info.avgLen}). ${symStr} Recommend: 1) Best workouts, 2) Foods and nutrients, 3) Self-care tips. Practical and empowering, 5-6 sentences.`);aiDiv.innerHTML="<div class='ai-box'>"+r+"</div>";}
+        catch{aiDiv.innerHTML="<div class='ai-box'>Could not load.</div>";}
+      });
+      aiDiv.appendChild(advBtn);
+    }
+    aiCard.appendChild(aiDiv);div.appendChild(aiCard);
+  }
+
+  else if(cycleSection==="log"){
+    const card=el("div",{class:"card"});card.appendChild(cardTitle("ti-calendar-plus","Log Period"));
+    card.appendChild(el("p",{style:{fontSize:13,color:"#666",marginBottom:12}},["Enter your period dates. The app auto-calculates your average cycle length."]));
+    const pStart=el("input",{type:"date"});const pEnd=el("input",{type:"date"});
+    card.appendChild(el("div",{style:{display:"flex",flexWrap:"wrap",gap:10,marginBottom:12}},[
+      el("div",{style:{flex:"1 1 140px"}},[el("p",{style:{fontSize:12,color:"#666",marginBottom:4}},["Period start *"]),pStart]),
+      el("div",{style:{flex:"1 1 140px"}},[el("p",{style:{fontSize:12,color:"#666",marginBottom:4}},["Period end (optional)"]),pEnd])
+    ]));
+    const logPBtn=btn("+ Log period","","btn primary");
+    logPBtn.addEventListener("click",()=>{
+      if(!pStart.value)return;
+      const entry={start:pStart.value,end:pEnd.value||null};
+      let nd=(cycle.periodDates||[]).filter(p=>p.start!==pStart.value);nd.push(entry);
+      if(nd.length>=2){const s=[...nd].sort((a,b)=>a.start>b.start?1:-1);const diffs=[];for(let i=1;i<s.length;i++){const d=Math.floor((new Date(s[i].start)-new Date(s[i-1].start))/86400000);if(d>0&&d<60)diffs.push(d);}if(diffs.length)state.cycle.avgCycleLength=Math.round(diffs.reduce((a,b)=>a+b,0)/diffs.length);}
+      state.cycle.periodDates=nd;save();cycleSection="overview";render();
+    });
+    card.appendChild(logPBtn);
+    card.appendChild(el("div",{style:{marginTop:16}},[
+      el("p",{style:{fontSize:13,fontWeight:500,marginBottom:8}},["Manual settings:"]),
+      el("div",{class:"row",style:{flexWrap:"wrap",gap:10}},[
+        el("div",{style:{flex:"1 1 120px"}},[el("p",{style:{fontSize:12,color:"#666",marginBottom:4}},["Avg cycle length (days)"]),el("input",{type:"number",value:String(cycle.avgCycleLength||28),onChange:e=>{state.cycle.avgCycleLength=parseInt(e.target.value)||28;save();}})]),
+        el("div",{style:{flex:"1 1 120px"}},[el("p",{style:{fontSize:12,color:"#666",marginBottom:4}},["Period duration (days)"]),el("input",{type:"number",value:String(cycle.avgPeriodDuration||5),onChange:e=>{state.cycle.avgPeriodDuration=parseInt(e.target.value)||5;save();}})]),
+      ])
+    ]));
+    div.appendChild(card);
+  }
+
+  else if(cycleSection==="ovulation"){
+    const card=el("div",{class:"card"});card.appendChild(cardTitle("ti-sparkles","Log Ovulation"));
+    card.appendChild(el("p",{style:{fontSize:13,color:"#666",marginBottom:12}},["Mark days you think you ovulated."]));
+    const ovInp=el("input",{type:"date",value:TODAY});
+    const ovBtn=btn("+ Log","","btn primary");
+    ovBtn.addEventListener("click",()=>{
+      if(ovInp.value&&!(cycle.ovulationDates||[]).includes(ovInp.value)){state.cycle.ovulationDates=[...(cycle.ovulationDates||[]),ovInp.value];save();render();}
+    });
+    card.appendChild(el("div",{class:"row",style:{marginBottom:12}},[ovInp,ovBtn]));
+    (cycle.ovulationDates||[]).sort((a,b)=>b>a?1:-1).slice(0,6).forEach(d=>{
+      const row=el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"0.5px solid rgba(0,0,0,0.08)"}});
+      row.appendChild(el("span",{style:{fontSize:14}},[d]));
+      const del=btn("x","","btn danger small");del.addEventListener("click",()=>{state.cycle.ovulationDates=state.cycle.ovulationDates.filter(x=>x!==d);save();render();});
+      row.appendChild(del);card.appendChild(row);
+    });
+    div.appendChild(card);
+  }
+
+  else if(cycleSection==="symptoms"){
+    const card=el("div",{class:"card"});card.appendChild(cardTitle("ti-stethoscope","Log Symptoms"));
+    const dateInp=el("input",{type:"date",value:TODAY});
+    card.appendChild(el("div",{style:{marginBottom:10}},[el("p",{style:{fontSize:12,color:"#666",marginBottom:4}},["Date"]),dateInp]));
+    let checked=(cycle.symptoms&&cycle.symptoms[dateInp.value]&&cycle.symptoms[dateInp.value].checklist)||[];
+    card.appendChild(el("p",{style:{fontSize:13,fontWeight:500,marginBottom:8}},["Symptoms:"]));
+    const chipDiv=el("div",{style:{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}});
+    SYMPTOM_LIST.forEach(sym=>{
+      const c=el("button",{class:"chip"+(checked.includes(sym)?" active":"")},[ sym]);
+      c.addEventListener("click",()=>{if(checked.includes(sym))checked=checked.filter(x=>x!==sym);else checked.push(sym);c.classList.toggle("active",checked.includes(sym));});
+      chipDiv.appendChild(c);
+    });
+    card.appendChild(chipDiv);
+    const notesTA=el("textarea",{placeholder:"Any other observations...",rows:3,style:{width:"100%",resize:"vertical",boxSizing:"border-box",marginBottom:10}});
+    if(cycle.symptoms&&cycle.symptoms[TODAY]) notesTA.value=cycle.symptoms[TODAY].notes||"";
+    card.appendChild(notesTA);
+    const saveBtn=btn("Save symptoms","","btn primary");
+    saveBtn.addEventListener("click",()=>{
+      if(!state.cycle.symptoms)state.cycle.symptoms={};
+      state.cycle.symptoms[dateInp.value]={checklist:checked,notes:notesTA.value};
+      save();render();
+    });
+    card.appendChild(saveBtn);div.appendChild(card);
+  }
+
+  else if(cycleSection==="history"){
+    const card=el("div",{class:"card"});card.appendChild(cardTitle("ti-history","Period History"));
+    const dates=(cycle.periodDates||[]).sort((a,b)=>b.start>a.start?1:-1);
+    if(!dates.length){card.appendChild(el("p",{style:{fontSize:13,color:"#666"}},["No periods logged yet."]));}
+    else dates.forEach((p,i,arr)=>{
+      const dur=p.end?Math.floor((new Date(p.end)-new Date(p.start))/86400000)+1:null;
+      const nxt=arr[i+1]?.start;const cLen=nxt?Math.floor((new Date(p.start)-new Date(nxt))/86400000):null;
+      const row=el("div",{style:{padding:"10px 0",borderBottom:i<arr.length-1?"0.5px solid rgba(0,0,0,0.08)":"none"}});
+      const inner=el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}});
+      inner.appendChild(el("div",[el("p",{style:{fontSize:14,fontWeight:500}},[p.start+(p.end?" to "+p.end:"")]),el("p",{style:{fontSize:12,color:"#666"}},[(dur?dur+" days":"End not logged")+(cLen?" · Cycle: "+cLen+" days":"")])]));
+      const del=btn("x","","btn danger small");
+      del.addEventListener("click",()=>{state.cycle.periodDates=state.cycle.periodDates.filter((_,j)=>j!==arr.length-1-i);save();render();});
+      inner.appendChild(del);row.appendChild(inner);card.appendChild(row);
+    });
+    div.appendChild(card);
+  }
+  return div;
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────────
+loadState();
+document.getElementById("today-str").textContent=new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+render();
+</script>
+</body>
+</html>

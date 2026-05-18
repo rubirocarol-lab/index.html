@@ -34,7 +34,7 @@ const defaultState = {
   steps: 0,
   stepHistory: [],
   habits: { water: false, devotion: false, sleep: 0 },
-  goals: { calories: 2000, water: 2500, steps: 10000, sleep: 8 },
+  goals: { calories: 2000, water: 2500, steps: 10000, sleep: 8, protein: 150, monthlySteps: 300000 },
   programs: [],
   workoutSessions: [],
   weightLog: [],
@@ -71,11 +71,106 @@ async function callAI(prompt) {
   return data.content.map(b => b.text || "").join("");
 }
 
-async function searchOFF(query) {
-  const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=6&fields=product_name,brands,nutriments,serving_size`;
-  const res = await fetch(url);
-  const data = await res.json();
-  return (data.products || []).filter(p => p.product_name && p.nutriments && (p.nutriments["energy-kcal_100g"] || p.nutriments["energy-kcal"]));
+// ── BUILT-IN FOOD DATABASE (whole foods, common meals, local staples) ──────────
+const FOOD_DB = [
+  // Proteins
+  { name: "Chicken Breast (grilled)", cal: 165, pro: 31, carb: 0, fat: 3.6, srv: "100g" },
+  { name: "Chicken Thigh (grilled)", cal: 209, pro: 26, carb: 0, fat: 11, srv: "100g" },
+  { name: "Beef Mince (lean, cooked)", cal: 218, pro: 26, carb: 0, fat: 12, srv: "100g" },
+  { name: "Beef Steak (sirloin, grilled)", cal: 207, pro: 27, carb: 0, fat: 10, srv: "100g" },
+  { name: "Salmon (baked)", cal: 208, pro: 20, carb: 0, fat: 13, srv: "100g" },
+  { name: "Tilapia (grilled)", cal: 128, pro: 26, carb: 0, fat: 2.7, srv: "100g" },
+  { name: "Tuna (canned in water)", cal: 116, pro: 26, carb: 0, fat: 1, srv: "100g" },
+  { name: "Eggs (whole, boiled)", cal: 155, pro: 13, carb: 1.1, fat: 11, srv: "100g (2 eggs)" },
+  { name: "Egg White", cal: 52, pro: 11, carb: 0.7, fat: 0.2, srv: "100g" },
+  { name: "Pork Chop (grilled)", cal: 231, pro: 25, carb: 0, fat: 14, srv: "100g" },
+  { name: "Lamb (roasted)", cal: 258, pro: 25, carb: 0, fat: 17, srv: "100g" },
+  { name: "Shrimp/Prawns (boiled)", cal: 99, pro: 24, carb: 0.2, fat: 0.3, srv: "100g" },
+  { name: "Tofu (firm)", cal: 76, pro: 8, carb: 2, fat: 4, srv: "100g" },
+  { name: "Lentils (cooked)", cal: 116, pro: 9, carb: 20, fat: 0.4, srv: "100g" },
+  { name: "Chickpeas (cooked)", cal: 164, pro: 9, carb: 27, fat: 2.6, srv: "100g" },
+  { name: "Black Beans (cooked)", cal: 132, pro: 9, carb: 24, fat: 0.5, srv: "100g" },
+  // Carbs & Grains
+  { name: "White Rice (cooked)", cal: 130, pro: 2.7, carb: 28, fat: 0.3, srv: "100g" },
+  { name: "Brown Rice (cooked)", cal: 123, pro: 2.7, carb: 26, fat: 1, srv: "100g" },
+  { name: "Ugali / Pap (cooked)", cal: 110, pro: 2.3, carb: 24, fat: 0.4, srv: "100g" },
+  { name: "Sadza (cooked)", cal: 110, pro: 2.3, carb: 24, fat: 0.4, srv: "100g" },
+  { name: "Fufu (cooked)", cal: 267, pro: 0.6, carb: 65, fat: 0.3, srv: "100g" },
+  { name: "Jollof Rice (with oil)", cal: 185, pro: 3.5, carb: 32, fat: 5, srv: "100g" },
+  { name: "Pasta (cooked)", cal: 158, pro: 5.8, carb: 31, fat: 0.9, srv: "100g" },
+  { name: "Oats (cooked with water)", cal: 71, pro: 2.5, carb: 12, fat: 1.5, srv: "100g" },
+  { name: "Oats (dry)", cal: 389, pro: 17, carb: 66, fat: 7, srv: "100g" },
+  { name: "White Bread (1 slice)", cal: 79, pro: 2.7, carb: 15, fat: 1, srv: "30g slice" },
+  { name: "Wholegrain Bread (1 slice)", cal: 69, pro: 3.6, carb: 12, fat: 1.2, srv: "30g slice" },
+  { name: "Sweet Potato (boiled)", cal: 86, pro: 1.6, carb: 20, fat: 0.1, srv: "100g" },
+  { name: "White Potato (boiled)", cal: 87, pro: 1.9, carb: 20, fat: 0.1, srv: "100g" },
+  { name: "Plantain (boiled)", cal: 116, pro: 0.8, carb: 31, fat: 0.1, srv: "100g" },
+  { name: "Plantain (fried)", cal: 218, pro: 1.5, carb: 41, fat: 6, srv: "100g" },
+  { name: "Cassava (boiled)", cal: 160, pro: 1.4, carb: 38, fat: 0.3, srv: "100g" },
+  { name: "Chapati (1 piece)", cal: 159, pro: 4.5, carb: 25, fat: 4.5, srv: "60g" },
+  { name: "Injera (1 piece)", cal: 150, pro: 4, carb: 30, fat: 0.8, srv: "100g" },
+  { name: "Quinoa (cooked)", cal: 120, pro: 4.4, carb: 21, fat: 1.9, srv: "100g" },
+  // Vegetables
+  { name: "Spinach (raw)", cal: 23, pro: 2.9, carb: 3.6, fat: 0.4, srv: "100g" },
+  { name: "Kale (raw)", cal: 49, pro: 4.3, carb: 9, fat: 0.9, srv: "100g" },
+  { name: "Sukuma Wiki / Collard Greens", cal: 32, pro: 3, carb: 5.4, fat: 0.6, srv: "100g" },
+  { name: "Broccoli (steamed)", cal: 35, pro: 2.4, carb: 7, fat: 0.4, srv: "100g" },
+  { name: "Tomato (raw)", cal: 18, pro: 0.9, carb: 3.9, fat: 0.2, srv: "100g" },
+  { name: "Onion (raw)", cal: 40, pro: 1.1, carb: 9.3, fat: 0.1, srv: "100g" },
+  { name: "Carrot (raw)", cal: 41, pro: 0.9, carb: 10, fat: 0.2, srv: "100g" },
+  { name: "Cabbage (raw)", cal: 25, pro: 1.3, carb: 5.8, fat: 0.1, srv: "100g" },
+  { name: "Cucumber (raw)", cal: 16, pro: 0.7, carb: 3.6, fat: 0.1, srv: "100g" },
+  { name: "Mixed Vegetables (stir fried)", cal: 65, pro: 2.5, carb: 8, fat: 3, srv: "100g" },
+  // Fruits
+  { name: "Banana (medium)", cal: 89, pro: 1.1, carb: 23, fat: 0.3, srv: "100g" },
+  { name: "Apple (medium)", cal: 52, pro: 0.3, carb: 14, fat: 0.2, srv: "100g" },
+  { name: "Mango (raw)", cal: 60, pro: 0.8, carb: 15, fat: 0.4, srv: "100g" },
+  { name: "Avocado", cal: 160, pro: 2, carb: 9, fat: 15, srv: "100g" },
+  { name: "Watermelon", cal: 30, pro: 0.6, carb: 7.6, fat: 0.2, srv: "100g" },
+  { name: "Orange (medium)", cal: 47, pro: 0.9, carb: 12, fat: 0.1, srv: "100g" },
+  { name: "Pineapple (raw)", cal: 50, pro: 0.5, carb: 13, fat: 0.1, srv: "100g" },
+  { name: "Papaya / Pawpaw", cal: 43, pro: 0.5, carb: 11, fat: 0.3, srv: "100g" },
+  { name: "Strawberries", cal: 32, pro: 0.7, carb: 7.7, fat: 0.3, srv: "100g" },
+  // Dairy
+  { name: "Full Cream Milk", cal: 61, pro: 3.2, carb: 4.8, fat: 3.3, srv: "100ml" },
+  { name: "Skimmed Milk", cal: 34, pro: 3.4, carb: 5, fat: 0.1, srv: "100ml" },
+  { name: "Greek Yoghurt (plain)", cal: 97, pro: 9, carb: 3.6, fat: 5, srv: "100g" },
+  { name: "Plain Yoghurt", cal: 61, pro: 3.5, carb: 4.7, fat: 3.3, srv: "100g" },
+  { name: "Cheddar Cheese", cal: 403, pro: 25, carb: 1.3, fat: 33, srv: "100g" },
+  { name: "Cottage Cheese", cal: 98, pro: 11, carb: 3.4, fat: 4.3, srv: "100g" },
+  // Fats & Oils
+  { name: "Olive Oil", cal: 884, pro: 0, carb: 0, fat: 100, srv: "100ml" },
+  { name: "Vegetable Oil / Sunflower Oil", cal: 884, pro: 0, carb: 0, fat: 100, srv: "100ml" },
+  { name: "Butter", cal: 717, pro: 0.9, carb: 0.1, fat: 81, srv: "100g" },
+  { name: "Peanut Butter", cal: 588, pro: 25, carb: 20, fat: 50, srv: "100g" },
+  // Nuts & Seeds
+  { name: "Almonds", cal: 579, pro: 21, carb: 22, fat: 50, srv: "100g" },
+  { name: "Groundnuts / Peanuts (roasted)", cal: 567, pro: 26, carb: 16, fat: 49, srv: "100g" },
+  { name: "Cashews", cal: 553, pro: 18, carb: 30, fat: 44, srv: "100g" },
+  { name: "Walnuts", cal: 654, pro: 15, carb: 14, fat: 65, srv: "100g" },
+  { name: "Sunflower Seeds", cal: 584, pro: 21, carb: 20, fat: 51, srv: "100g" },
+  // Common meals
+  { name: "Beef Stew (with vegetables)", cal: 185, pro: 16, carb: 8, fat: 10, srv: "100g" },
+  { name: "Chicken Stew", cal: 150, pro: 18, carb: 5, fat: 7, srv: "100g" },
+  { name: "Bean Stew", cal: 140, pro: 8, carb: 22, fat: 3, srv: "100g" },
+  { name: "Vegetable Soup", cal: 55, pro: 2.5, carb: 9, fat: 1.5, srv: "100ml" },
+  { name: "Fried Egg (1 large)", cal: 90, pro: 6.3, carb: 0.4, fat: 7, srv: "1 egg (~50g)" },
+  { name: "Scrambled Eggs (2 eggs, no milk)", cal: 182, pro: 12, carb: 1.5, fat: 14, srv: "2 eggs" },
+  { name: "Boiled Egg (1 large)", cal: 78, pro: 6.3, carb: 0.6, fat: 5.3, srv: "1 egg" },
+  // Drinks
+  { name: "Orange Juice (fresh)", cal: 45, pro: 0.7, carb: 10, fat: 0.2, srv: "100ml" },
+  { name: "Whole Milk (1 glass)", cal: 122, pro: 6.4, carb: 9.6, fat: 6.6, srv: "200ml" },
+  { name: "Black Coffee (no sugar)", cal: 2, pro: 0.3, carb: 0, fat: 0, srv: "240ml" },
+  { name: "Tea with milk & sugar", cal: 45, pro: 1, carb: 8, fat: 1, srv: "240ml" },
+];
+
+function searchLocalDB(query) {
+  const q = query.toLowerCase().trim();
+  const words = q.split(/\s+/);
+  return FOOD_DB.filter(food => {
+    const name = food.name.toLowerCase();
+    return words.some(word => word.length > 2 && name.includes(word));
+  }).slice(0, 6);
 }
 
 // Unit conversion to grams/ml equivalent for nutrition calc
@@ -179,7 +274,7 @@ function NutritionTab({ state, setState }) {
   const [aiText, setAiText] = useState(""); const [aiLoading, setAiLoading] = useState(false); const [aiFood, setAiFood] = useState(null);
   const [servingQty, setServingQty] = useState({}); const [servingUnit, setServingUnit] = useState({});
   const [manName, setManName] = useState(""); const [manQty, setManQty] = useState(""); const [manUnit, setManUnit] = useState("g");
-  const [manCals, setManCals] = useState(""); const [manProt, setManProt] = useState(""); const [manCarbs, setManCarbs] = useState(""); const [manFat, setManFat] = useState("");
+  const [manCals, setManCals] = useState(""); const [manProt, setManProt] = useState(""); const [manCarbs, setManCarbs] = useState(""); const [manFat, setManFat] = useState(""); const [manFibre, setManFibre] = useState("");
   const [waterInput, setWaterInput] = useState("");
 
   const totalCals = state.foods.reduce((s, f) => s + (f.calories || 0), 0);
@@ -190,84 +285,167 @@ function NutritionTab({ state, setState }) {
   async function doSearch() {
     if (!query.trim()) return;
     setSearching(true); setResults([]); setAiText(""); setAiFood(null);
+
+    // 1. Check local built-in database first (instant, no network)
+    const localResults = searchLocalDB(query);
+    if (localResults.length) {
+      setResults(localResults.map(f => ({ ...f, fromDB: true })));
+      const initU = {}; localResults.forEach(f => { initU[f.name] = "g"; });
+      setServingUnit(initU);
+      const initQ = {}; localResults.forEach(f => { initQ[f.name] = "100"; });
+      setServingQty(initQ);
+      setSearching(false);
+      return;
+    }
+
+    // 2. Not in local DB — ask AI for accurate nutritional data
+    setAiLoading(true);
     try {
-      const products = await searchOFF(query);
-      if (products.length) {
-        setResults(products);
-        const initU = {}; products.forEach(p => { initU[p.product_name] = "g"; });
-        setServingUnit(initU);
-        const initQ = {}; products.forEach(p => { initQ[p.product_name] = "100"; });
-        setServingQty(initQ);
-      } else {
-        setAiLoading(true);
-        const res = await callAI(`Nutrition expert. Estimate per 100g for: "${query}". 2-3 sentences. End with: CALORIES:[number] PROTEIN:[number] CARBS:[number] FAT:[number]`);
-        const parse = (key) => { const m = res.match(new RegExp(key + ":[\\d.]+", "i")); return m ? parseFloat(m[0].split(":")[1]) : 0; };
-        setAiText(res.replace(/CALORIES:[\d.]+/ig,"").replace(/PROTEIN:[\d.]+/ig,"").replace(/CARBS:[\d.]+/ig,"").replace(/FAT:[\d.]+/ig,"").trim());
-        setAiFood({ name: query, calories: Math.round(parse("CALORIES")), protein: parse("PROTEIN"), carbs: parse("CARBS"), fat: parse("FAT"), qty: "100g" });
-        setAiLoading(false);
-      }
-    } catch { setAiText("Search failed. Please try again."); setAiLoading(false); }
+      const res = await callAI(`You are a nutrition database. Give accurate nutritional values per 100g for: "${query}". Keep description to 1 sentence. End with exactly: CALORIES:[number] PROTEIN:[number] CARBS:[number] FAT:[number]. Use well-known reference values (e.g. cooked chicken breast = 165 kcal, 31g protein, 0g carbs, 3.6g fat per 100g).`);
+      const parse = (key) => { const m = res.match(new RegExp(key + ":[\\d.]+", "i")); return m ? parseFloat(m[0].split(":")[1]) : 0; };
+      const cleanText = res.replace(/CALORIES:[\d.]+/ig,"").replace(/PROTEIN:[\d.]+/ig,"").replace(/CARBS:[\d.]+/ig,"").replace(/FAT:[\d.]+/ig,"").trim();
+      setAiText(cleanText);
+      setAiFood({ name: query, calories: Math.round(parse("CALORIES")), protein: Math.round(parse("PROTEIN") * 10) / 10, carbs: Math.round(parse("CARBS") * 10) / 10, fat: Math.round(parse("FAT") * 10) / 10, qty: "100g" });
+    } catch { setAiText("Search failed. Try typing the food name manually below."); }
+    setAiLoading(false);
     setSearching(false);
   }
 
   function addFromDB(product) {
-    const rawQty = parseFloat(servingQty[product.product_name] || "100") || 100;
-    const unit = servingUnit[product.product_name] || "g";
+    const key = product.fromDB ? product.name : product.product_name;
+    const rawQty = parseFloat(servingQty[key] || "100") || 100;
+    const unit = servingUnit[key] || "g";
     const grams = toGrams(rawQty, unit);
     const factor = grams / 100;
-    const n = product.nutriments;
-    const food = {
-      name: product.product_name + (product.brands ? ` (${product.brands})` : ""),
-      calories: Math.round((n["energy-kcal_100g"] || n["energy-kcal"] || 0) * factor),
-      protein: Math.round((n.proteins_100g || 0) * factor * 10) / 10,
-      carbs: Math.round((n.carbohydrates_100g || 0) * factor * 10) / 10,
-      fat: Math.round((n.fat_100g || 0) * factor * 10) / 10,
-      serving: `${rawQty} ${unit}`,
-    };
+    let food;
+    if (product.fromDB) {
+      // Local database entry
+      food = {
+        name: product.name,
+        calories: Math.round(product.cal * factor),
+        protein: Math.round(product.pro * factor * 10) / 10,
+        carbs: Math.round(product.carb * factor * 10) / 10,
+        fat: Math.round(product.fat * factor * 10) / 10,
+        serving: `${rawQty} ${unit}`,
+      };
+    } else {
+      // Open Food Facts entry (kept as fallback)
+      const n = product.nutriments;
+      food = {
+        name: product.product_name + (product.brands ? ` (${product.brands})` : ""),
+        calories: Math.round((n["energy-kcal_100g"] || n["energy-kcal"] || 0) * factor),
+        protein: Math.round((n.proteins_100g || 0) * factor * 10) / 10,
+        carbs: Math.round((n.carbohydrates_100g || 0) * factor * 10) / 10,
+        fat: Math.round((n.fat_100g || 0) * factor * 10) / 10,
+        serving: `${rawQty} ${unit}`,
+      };
+    }
     setState(s => ({ ...s, foods: [...s.foods, food] }));
     setResults([]); setQuery("");
   }
 
   function addManual() {
     if (!manName.trim()) return;
-    setState(s => ({ ...s, foods: [...s.foods, { name: manName, calories: parseInt(manCals) || 0, protein: parseFloat(manProt) || 0, carbs: parseFloat(manCarbs) || 0, fat: parseFloat(manFat) || 0, serving: `${manQty} ${manUnit}` }] }));
-    setManName(""); setManQty(""); setManCals(""); setManProt(""); setManCarbs(""); setManFat("");
+    setState(s => ({ ...s, foods: [...s.foods, { name: manName, calories: parseInt(manCals) || 0, protein: parseFloat(manProt) || 0, carbs: parseFloat(manCarbs) || 0, fat: parseFloat(manFat) || 0, fibre: parseFloat(manFibre) || 0, serving: `${manQty} ${manUnit}` }] }));
+    setManName(""); setManQty(""); setManCals(""); setManProt(""); setManCarbs(""); setManFat(""); setManFibre("");
   }
 
   function addWater(ml) { setState(s => ({ ...s, water: s.water + ml })); }
   function addWaterCustom() { const v = parseInt(waterInput) || 0; if (v > 0) { addWater(v); setWaterInput(""); } }
 
+  const totalFibre = state.foods.reduce((s, f) => s + (f.fibre || 0), 0);
+  const calPct = Math.min(100, Math.round(totalCals / state.goals.calories * 100));
+  const protPct = Math.min(100, Math.round(totalProt / (state.goals.protein || 150) * 100));
+  // Macro split percentages (of calories)
+  const protCals = totalProt * 4; const carbCals = totalCarbs * 4; const fatCals = totalFat * 9;
+  const totalMacroCals = protCals + carbCals + fatCals || 1;
+  const protSplit = Math.round(protCals / totalMacroCals * 100);
+  const carbSplit = Math.round(carbCals / totalMacroCals * 100);
+  const fatSplit = Math.round(fatCals / totalMacroCals * 100);
+
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 8, marginBottom: 12 }}>
-        <MCard label="Calories" value={totalCals} unit={`/ ${state.goals.calories} kcal`} color="#D85A30" />
-        <MCard label="Protein" value={`${totalProt.toFixed(1)}g`} unit="protein" color="#534AB7" />
-        <MCard label="Carbs" value={`${totalCarbs.toFixed(1)}g`} unit="carbs" color="#BA7517" />
-        <MCard label="Fat" value={`${totalFat.toFixed(1)}g`} unit="fat" color="#1D9E75" />
-      </div>
+      {/* Calorie summary */}
+      <Card style={{ marginBottom: 10 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+          <p style={{ fontSize: 15, fontWeight: 500 }}>Calories</p>
+          <p style={{ fontSize: 13, color: "var(--color-text-secondary,#666)" }}><span style={{ fontSize: 22, fontWeight: 600, color: "#D85A30" }}>{totalCals}</span> / {state.goals.calories} kcal</p>
+        </div>
+        <PBar value={totalCals} max={state.goals.calories} color="#D85A30" />
+        <p style={{ fontSize: 11, color: "var(--color-text-secondary,#666)", marginTop: 3 }}>{state.goals.calories - totalCals > 0 ? `${state.goals.calories - totalCals} kcal remaining` : `${totalCals - state.goals.calories} kcal over goal`}</p>
+      </Card>
+
+      {/* Macros breakdown */}
+      <Card style={{ marginBottom: 10 }}>
+        <CT icon="ti-chart-pie">Macros Breakdown</CT>
+
+        {/* Visual bar split */}
+        {totalMacroCals > 1 && (
+          <div style={{ display: "flex", height: 10, borderRadius: 5, overflow: "hidden", marginBottom: 10, gap: 2 }}>
+            <div style={{ width: protSplit + "%", background: "#534AB7", borderRadius: "5px 0 0 5px" }} title={`Protein ${protSplit}%`} />
+            <div style={{ width: carbSplit + "%", background: "#BA7517" }} title={`Carbs ${carbSplit}%`} />
+            <div style={{ width: fatSplit + "%", background: "#1D9E75", borderRadius: "0 5px 5px 0" }} title={`Fat ${fatSplit}%`} />
+          </div>
+        )}
+
+        {/* Each macro row */}
+        {[
+          { label: "Protein", value: totalProt, goal: state.goals.protein || 150, unit: "g", color: "#534AB7", split: protSplit },
+          { label: "Carbohydrates", value: totalCarbs, goal: null, unit: "g", color: "#BA7517", split: carbSplit },
+          { label: "Fat", value: totalFat, goal: null, unit: "g", color: "#1D9E75", split: fatSplit },
+          { label: "Fibre", value: totalFibre, goal: 25, unit: "g", color: "#0F6E56", split: null },
+        ].map((m, i) => (
+          <div key={i} style={{ marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 2 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: m.color, display: "inline-block" }} />
+                {m.label}
+                {m.split !== null && <span style={{ fontSize: 11, color: "var(--color-text-secondary,#666)" }}>({m.split}% of cals)</span>}
+              </span>
+              <span style={{ color: "var(--color-text-secondary,#666)" }}>
+                <strong style={{ color: m.color }}>{m.value.toFixed(1)}{m.unit}</strong>
+                {m.goal ? ` / ${m.goal}${m.unit} goal` : ""}
+              </span>
+            </div>
+            {m.goal && <PBar value={m.value} max={m.goal} color={m.color} />}
+            {!m.goal && <div style={{ height: 6, background: m.color, borderRadius: 3, opacity: 0.25, marginTop: 4 }} />}
+          </div>
+        ))}
+      </Card>
 
       <Card>
         <CT icon="ti-search">Search Food Database</CT>
-        <p style={{ fontSize: 12, color: "var(--color-text-secondary,#666)", marginBottom: 8 }}>Open Food Facts — millions of products including local foods. AI fallback if not found.</p>
+        <p style={{ fontSize: 12, color: "var(--color-text-secondary,#666)", marginBottom: 8 }}>80+ built-in whole foods + AI for anything else.</p>
         <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
           <Inp value={query} onChange={e => setQuery(e.target.value)} placeholder="e.g. oats, ugali, avocado, jollof rice..." onKeyDown={e => e.key === "Enter" && doSearch()} />
           <Btn onClick={doSearch} primary disabled={searching}><i className="ti ti-search" aria-hidden="true" />{searching ? "..." : "Search"}</Btn>
         </div>
 
         {results.map((p, i) => {
-          const n = p.nutriments; const kcal = Math.round(n["energy-kcal_100g"] || n["energy-kcal"] || 0); const prot = (n.proteins_100g || 0).toFixed(1); const key = p.product_name;
-          const qty = servingQty[key] || "100"; const unit = servingUnit[key] || "g";
+          const isLocal = p.fromDB;
+          const key = isLocal ? p.name : p.product_name;
+          const kcal = isLocal ? p.cal : Math.round((p.nutriments?.["energy-kcal_100g"] || p.nutriments?.["energy-kcal"] || 0));
+          const prot = isLocal ? p.pro : (p.nutriments?.proteins_100g || 0).toFixed(1);
+          const carb = isLocal ? p.carb : (p.nutriments?.carbohydrates_100g || 0).toFixed(1);
+          const fat = isLocal ? p.fat : (p.nutriments?.fat_100g || 0).toFixed(1);
+          const qty = servingQty[key] || "100";
+          const unit = servingUnit[key] || "g";
           const estCals = Math.round(kcal * toGrams(parseFloat(qty) || 100, unit) / 100);
           return (
             <div key={i} style={{ padding: "10px 0", borderBottom: "0.5px solid var(--color-border-tertiary,rgba(0,0,0,0.08))" }}>
-              <p style={{ fontSize: 14, fontWeight: 500 }}>{p.product_name}</p>
-              <p style={{ fontSize: 12, color: "var(--color-text-secondary,#666)", marginBottom: 8 }}>{p.brands || "Generic"} · {kcal} kcal · {prot}g protein per 100g</p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                <p style={{ fontSize: 14, fontWeight: 500 }}>{key}</p>
+                {isLocal && <span style={{ fontSize: 11, background: "#EAF3DE", color: "#3B6D11", padding: "1px 6px", borderRadius: 8, flexShrink: 0 }}>✓ Verified</span>}
+              </div>
+              <p style={{ fontSize: 12, color: "var(--color-text-secondary,#666)", marginBottom: 8 }}>
+                {kcal} kcal · {prot}g protein · {carb}g carbs · {fat}g fat <span style={{ opacity: 0.6 }}>per 100g</span>
+              </p>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <Inp type="number" value={qty} onChange={e => setServingQty(q => ({ ...q, [key]: e.target.value }))} placeholder="Qty" style={{ width: 70 }} />
                 <Sel value={unit} onChange={e => setServingUnit(u => ({ ...u, [key]: e.target.value }))} style={{ flex: 1, minWidth: 130 }}>
                   {UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </Sel>
-                <span style={{ fontSize: 12, color: "#D85A30", flexShrink: 0 }}>≈ {estCals} kcal</span>
+                <span style={{ fontSize: 12, color: "#D85A30", flexShrink: 0, fontWeight: 500 }}>≈ {estCals} kcal</span>
                 <Btn onClick={() => addFromDB(p)} primary small><i className="ti ti-plus" aria-hidden="true" /> Add</Btn>
               </div>
             </div>
@@ -297,6 +475,7 @@ function NutritionTab({ state, setState }) {
           <Inp value={manProt} onChange={e => setManProt(e.target.value)} type="number" placeholder="protein g" style={{ flex: "1 1 60px" }} />
           <Inp value={manCarbs} onChange={e => setManCarbs(e.target.value)} type="number" placeholder="carbs g" style={{ flex: "1 1 60px" }} />
           <Inp value={manFat} onChange={e => setManFat(e.target.value)} type="number" placeholder="fat g" style={{ flex: "1 1 60px" }} />
+          <Inp value={manFibre} onChange={e => setManFibre(e.target.value)} type="number" placeholder="fibre g" style={{ flex: "1 1 60px" }} />
           <Btn onClick={addManual} primary><i className="ti ti-plus" aria-hidden="true" /> Add</Btn>
         </div>
       </Card>
@@ -321,7 +500,7 @@ function NutritionTab({ state, setState }) {
             <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: i < state.foods.length - 1 ? "0.5px solid var(--color-border-tertiary,rgba(0,0,0,0.08))" : "none" }}>
               <div>
                 <p style={{ fontSize: 14, fontWeight: 500 }}>{f.name}</p>
-                <p style={{ fontSize: 12, color: "var(--color-text-secondary,#666)" }}>{f.serving ? `${f.serving} · ` : ""}{f.calories} kcal · {f.protein}g P · {f.carbs}g C · {f.fat}g F</p>
+                <p style={{ fontSize: 12, color: "var(--color-text-secondary,#666)" }}>{f.serving ? `${f.serving} · ` : ""}{f.calories} kcal · {f.protein}g P · {f.carbs}g C · {f.fat}g F{f.fibre ? ` · ${f.fibre}g fibre` : ""}</p>
               </div>
               <Btn onClick={() => setState(s => ({ ...s, foods: s.foods.filter((_, j) => j !== i) }))} danger small><i className="ti ti-trash" aria-hidden="true" /></Btn>
             </div>
@@ -760,10 +939,11 @@ function HabitsTab({ state, setState }) {
 
 // ── GOALS ─────────────────────────────────────────────────────────────────────
 function GoalsTab({ state, setState }) {
-  const [inputs, setInputs] = useState({ calories: "", water: "", steps: "", sleep: "" });
+  const [inputs, setInputs] = useState({ calories: "", protein: "", water: "", steps: "", sleep: "" });
   const [aiText, setAiText] = useState(""); const [aiLoading, setAiLoading] = useState(false);
   const totalCals = state.foods.reduce((s, f) => s + (f.calories || 0), 0);
-  const items = [{ label: "Calories", current: totalCals, goal: state.goals.calories, unit: "kcal", color: "#D85A30" }, { label: "Water", current: state.water, goal: state.goals.water, unit: "ml", color: "#1D9E75" }, { label: "Steps", current: state.steps, goal: state.goals.steps, unit: "steps", color: "#534AB7" }, { label: "Sleep", current: state.habits.sleep, goal: state.goals.sleep, unit: "hrs", color: "#BA7517" }];
+  const totalProt = state.foods.reduce((s, f) => s + (f.protein || 0), 0);
+  const items = [{ label: "Calories", current: totalCals, goal: state.goals.calories, unit: "kcal", color: "#D85A30" }, { label: "Protein", current: totalProt, goal: state.goals.protein || 150, unit: "g", color: "#534AB7" }, { label: "Water", current: state.water, goal: state.goals.water, unit: "ml", color: "#1D9E75" }, { label: "Steps", current: state.steps, goal: state.goals.steps, unit: "steps", color: "#185FA5" }, { label: "Sleep", current: state.habits.sleep, goal: state.goals.sleep, unit: "hrs", color: "#BA7517" }];
   async function getAdvice() {
     setAiLoading(true); setAiText("");
     try { const r = await callAI(`Wellness coach. Stats: ${items.map(i => `${i.label}: ${i.current}/${i.goal}${i.unit}`).join(", ")}. Give 3-4 specific, encouraging suggestions.`); setAiText(r); }
@@ -774,11 +954,11 @@ function GoalsTab({ state, setState }) {
       <Card>
         <CT icon="ti-target">Set Daily Goals</CT>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 10, marginBottom: 12 }}>
-          {[{ key: "calories", label: "Calorie goal (kcal)", ph: state.goals.calories }, { key: "water", label: "Water goal (ml)", ph: state.goals.water }, { key: "steps", label: "Step goal", ph: state.goals.steps }, { key: "sleep", label: "Sleep goal (hrs)", ph: state.goals.sleep }].map(f => (
+          {[{ key: "calories", label: "Calorie goal (kcal)", ph: state.goals.calories }, { key: "protein", label: "Protein goal (g)", ph: state.goals.protein || 150 }, { key: "water", label: "Water goal (ml)", ph: state.goals.water }, { key: "steps", label: "Step goal", ph: state.goals.steps }, { key: "sleep", label: "Sleep goal (hrs)", ph: state.goals.sleep }].map(f => (
             <div key={f.key}><p style={{ fontSize: 12, color: "var(--color-text-secondary,#666)", marginBottom: 4 }}>{f.label}</p><Inp value={inputs[f.key]} onChange={e => setInputs(p => ({ ...p, [f.key]: e.target.value }))} type="number" placeholder={String(f.ph)} /></div>
           ))}
         </div>
-        <Btn onClick={() => { setState(s => ({ ...s, goals: { calories: parseInt(inputs.calories) || s.goals.calories, water: parseInt(inputs.water) || s.goals.water, steps: parseInt(inputs.steps) || s.goals.steps, sleep: parseFloat(inputs.sleep) || s.goals.sleep } })); setInputs({ calories: "", water: "", steps: "", sleep: "" }); }} primary>Save goals</Btn>
+        <Btn onClick={() => { setState(s => ({ ...s, goals: { ...s.goals, calories: parseInt(inputs.calories) || s.goals.calories, protein: parseInt(inputs.protein) || s.goals.protein || 150, water: parseInt(inputs.water) || s.goals.water, steps: parseInt(inputs.steps) || s.goals.steps, sleep: parseFloat(inputs.sleep) || s.goals.sleep } })); setInputs({ calories: "", protein: "", water: "", steps: "", sleep: "" }); }} primary>Save goals</Btn>
       </Card>
       <Card>
         <CT icon="ti-chart-dots">Today's Progress</CT>

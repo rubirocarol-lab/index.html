@@ -71,106 +71,133 @@ async function callAI(prompt) {
   return data.content.map(b => b.text || "").join("");
 }
 
-// ── BUILT-IN FOOD DATABASE (whole foods, common meals, local staples) ──────────
+// ── BUILT-IN FOOD DATABASE ────────────────────────────────────────────────────
+// cal/pro/carb/fat are PER 100g or 100ml
+// itemG = grams for 1 typical item/piece/unit (used when unit = "item")
+// cupG  = grams/ml for 1 cup (used when unit = "cup"), defaults to 240 if not set
 const FOOD_DB = [
   // Proteins
-  { name: "Chicken Breast (grilled)", cal: 165, pro: 31, carb: 0, fat: 3.6, srv: "100g" },
-  { name: "Chicken Thigh (grilled)", cal: 209, pro: 26, carb: 0, fat: 11, srv: "100g" },
-  { name: "Beef Mince (lean, cooked)", cal: 218, pro: 26, carb: 0, fat: 12, srv: "100g" },
-  { name: "Beef Steak (sirloin, grilled)", cal: 207, pro: 27, carb: 0, fat: 10, srv: "100g" },
-  { name: "Salmon (baked)", cal: 208, pro: 20, carb: 0, fat: 13, srv: "100g" },
-  { name: "Tilapia (grilled)", cal: 128, pro: 26, carb: 0, fat: 2.7, srv: "100g" },
-  { name: "Tuna (canned in water)", cal: 116, pro: 26, carb: 0, fat: 1, srv: "100g" },
-  { name: "Eggs (whole, boiled)", cal: 155, pro: 13, carb: 1.1, fat: 11, srv: "100g (2 eggs)" },
-  { name: "Egg White", cal: 52, pro: 11, carb: 0.7, fat: 0.2, srv: "100g" },
-  { name: "Pork Chop (grilled)", cal: 231, pro: 25, carb: 0, fat: 14, srv: "100g" },
-  { name: "Lamb (roasted)", cal: 258, pro: 25, carb: 0, fat: 17, srv: "100g" },
-  { name: "Shrimp/Prawns (boiled)", cal: 99, pro: 24, carb: 0.2, fat: 0.3, srv: "100g" },
-  { name: "Tofu (firm)", cal: 76, pro: 8, carb: 2, fat: 4, srv: "100g" },
-  { name: "Lentils (cooked)", cal: 116, pro: 9, carb: 20, fat: 0.4, srv: "100g" },
-  { name: "Chickpeas (cooked)", cal: 164, pro: 9, carb: 27, fat: 2.6, srv: "100g" },
-  { name: "Black Beans (cooked)", cal: 132, pro: 9, carb: 24, fat: 0.5, srv: "100g" },
+  { name: "Chicken Breast (grilled)", cal: 165, pro: 31, carb: 0, fat: 3.6, itemG: 150, note: "~1 medium breast" },
+  { name: "Chicken Thigh (grilled)", cal: 209, pro: 26, carb: 0, fat: 11, itemG: 100 },
+  { name: "Beef Mince (lean, cooked)", cal: 218, pro: 26, carb: 0, fat: 12 },
+  { name: "Beef Steak (sirloin, grilled)", cal: 207, pro: 27, carb: 0, fat: 10, itemG: 200, note: "~1 medium steak" },
+  { name: "Salmon (baked)", cal: 208, pro: 20, carb: 0, fat: 13, itemG: 150, note: "~1 fillet" },
+  { name: "Tilapia (grilled)", cal: 128, pro: 26, carb: 0, fat: 2.7, itemG: 130 },
+  { name: "Tuna (canned in water)", cal: 116, pro: 26, carb: 0, fat: 1 },
+  { name: "Egg (whole, boiled)", cal: 155, pro: 13, carb: 1.1, fat: 11, itemG: 50, note: "~1 large egg" },
+  { name: "Egg White", cal: 52, pro: 11, carb: 0.7, fat: 0.2, itemG: 33 },
+  { name: "Pork Chop (grilled)", cal: 231, pro: 25, carb: 0, fat: 14, itemG: 150 },
+  { name: "Lamb (roasted)", cal: 258, pro: 25, carb: 0, fat: 17 },
+  { name: "Shrimp / Prawns (boiled)", cal: 99, pro: 24, carb: 0.2, fat: 0.3 },
+  { name: "Tofu (firm)", cal: 76, pro: 8, carb: 2, fat: 4 },
+  { name: "Lentils (cooked)", cal: 116, pro: 9, carb: 20, fat: 0.4, cupG: 200 },
+  { name: "Chickpeas (cooked)", cal: 164, pro: 9, carb: 27, fat: 2.6, cupG: 164 },
+  { name: "Black Beans (cooked)", cal: 132, pro: 9, carb: 24, fat: 0.5, cupG: 172 },
   // Carbs & Grains
-  { name: "White Rice (cooked)", cal: 130, pro: 2.7, carb: 28, fat: 0.3, srv: "100g" },
-  { name: "Brown Rice (cooked)", cal: 123, pro: 2.7, carb: 26, fat: 1, srv: "100g" },
-  { name: "Ugali / Pap (cooked)", cal: 110, pro: 2.3, carb: 24, fat: 0.4, srv: "100g" },
-  { name: "Sadza (cooked)", cal: 110, pro: 2.3, carb: 24, fat: 0.4, srv: "100g" },
-  { name: "Fufu (cooked)", cal: 267, pro: 0.6, carb: 65, fat: 0.3, srv: "100g" },
-  { name: "Jollof Rice (with oil)", cal: 185, pro: 3.5, carb: 32, fat: 5, srv: "100g" },
-  { name: "Pasta (cooked)", cal: 158, pro: 5.8, carb: 31, fat: 0.9, srv: "100g" },
-  { name: "Oats (cooked with water)", cal: 71, pro: 2.5, carb: 12, fat: 1.5, srv: "100g" },
-  { name: "Oats (dry)", cal: 389, pro: 17, carb: 66, fat: 7, srv: "100g" },
-  { name: "White Bread (1 slice)", cal: 79, pro: 2.7, carb: 15, fat: 1, srv: "30g slice" },
-  { name: "Wholegrain Bread (1 slice)", cal: 69, pro: 3.6, carb: 12, fat: 1.2, srv: "30g slice" },
-  { name: "Sweet Potato (boiled)", cal: 86, pro: 1.6, carb: 20, fat: 0.1, srv: "100g" },
-  { name: "White Potato (boiled)", cal: 87, pro: 1.9, carb: 20, fat: 0.1, srv: "100g" },
-  { name: "Plantain (boiled)", cal: 116, pro: 0.8, carb: 31, fat: 0.1, srv: "100g" },
-  { name: "Plantain (fried)", cal: 218, pro: 1.5, carb: 41, fat: 6, srv: "100g" },
-  { name: "Cassava (boiled)", cal: 160, pro: 1.4, carb: 38, fat: 0.3, srv: "100g" },
-  { name: "Chapati (1 piece)", cal: 159, pro: 4.5, carb: 25, fat: 4.5, srv: "60g" },
-  { name: "Injera (1 piece)", cal: 150, pro: 4, carb: 30, fat: 0.8, srv: "100g" },
-  { name: "Quinoa (cooked)", cal: 120, pro: 4.4, carb: 21, fat: 1.9, srv: "100g" },
+  { name: "White Rice (cooked)", cal: 130, pro: 2.7, carb: 28, fat: 0.3, cupG: 186 },
+  { name: "Brown Rice (cooked)", cal: 123, pro: 2.7, carb: 26, fat: 1, cupG: 195 },
+  { name: "Ugali / Pap (cooked)", cal: 110, pro: 2.3, carb: 24, fat: 0.4 },
+  { name: "Sadza (cooked)", cal: 110, pro: 2.3, carb: 24, fat: 0.4 },
+  { name: "Fufu (cooked)", cal: 267, pro: 0.6, carb: 65, fat: 0.3 },
+  { name: "Jollof Rice (with oil)", cal: 185, pro: 3.5, carb: 32, fat: 5, cupG: 190 },
+  { name: "Pasta (cooked)", cal: 158, pro: 5.8, carb: 31, fat: 0.9, cupG: 140 },
+  { name: "Oats (cooked with water)", cal: 71, pro: 2.5, carb: 12, fat: 1.5, cupG: 234 },
+  { name: "Oats (dry)", cal: 389, pro: 17, carb: 66, fat: 7, cupG: 81 },
+  { name: "White Bread", cal: 265, pro: 9, carb: 51, fat: 3.2, itemG: 30, note: "~1 slice (30g)" },
+  { name: "Wholegrain Bread", cal: 247, pro: 12, carb: 41, fat: 4.2, itemG: 30, note: "~1 slice (30g)" },
+  { name: "Sweet Potato (boiled)", cal: 86, pro: 1.6, carb: 20, fat: 0.1, itemG: 130, note: "~1 medium" },
+  { name: "White Potato (boiled)", cal: 87, pro: 1.9, carb: 20, fat: 0.1, itemG: 150, note: "~1 medium" },
+  { name: "Plantain (boiled)", cal: 116, pro: 0.8, carb: 31, fat: 0.1, itemG: 120 },
+  { name: "Plantain (fried)", cal: 218, pro: 1.5, carb: 41, fat: 6 },
+  { name: "Cassava (boiled)", cal: 160, pro: 1.4, carb: 38, fat: 0.3 },
+  { name: "Chapati", cal: 265, pro: 7.5, carb: 42, fat: 7.5, itemG: 60, note: "~1 piece (60g)" },
+  { name: "Injera", cal: 150, pro: 4, carb: 30, fat: 0.8, itemG: 100, note: "~1 piece" },
+  { name: "Quinoa (cooked)", cal: 120, pro: 4.4, carb: 21, fat: 1.9, cupG: 185 },
   // Vegetables
-  { name: "Spinach (raw)", cal: 23, pro: 2.9, carb: 3.6, fat: 0.4, srv: "100g" },
-  { name: "Kale (raw)", cal: 49, pro: 4.3, carb: 9, fat: 0.9, srv: "100g" },
-  { name: "Sukuma Wiki / Collard Greens", cal: 32, pro: 3, carb: 5.4, fat: 0.6, srv: "100g" },
-  { name: "Broccoli (steamed)", cal: 35, pro: 2.4, carb: 7, fat: 0.4, srv: "100g" },
-  { name: "Tomato (raw)", cal: 18, pro: 0.9, carb: 3.9, fat: 0.2, srv: "100g" },
-  { name: "Onion (raw)", cal: 40, pro: 1.1, carb: 9.3, fat: 0.1, srv: "100g" },
-  { name: "Carrot (raw)", cal: 41, pro: 0.9, carb: 10, fat: 0.2, srv: "100g" },
-  { name: "Cabbage (raw)", cal: 25, pro: 1.3, carb: 5.8, fat: 0.1, srv: "100g" },
-  { name: "Cucumber (raw)", cal: 16, pro: 0.7, carb: 3.6, fat: 0.1, srv: "100g" },
-  { name: "Mixed Vegetables (stir fried)", cal: 65, pro: 2.5, carb: 8, fat: 3, srv: "100g" },
+  { name: "Spinach (raw)", cal: 23, pro: 2.9, carb: 3.6, fat: 0.4, cupG: 30 },
+  { name: "Kale (raw)", cal: 49, pro: 4.3, carb: 9, fat: 0.9, cupG: 67 },
+  { name: "Sukuma Wiki / Collard Greens", cal: 32, pro: 3, carb: 5.4, fat: 0.6, cupG: 36 },
+  { name: "Broccoli (steamed)", cal: 35, pro: 2.4, carb: 7, fat: 0.4, cupG: 156 },
+  { name: "Tomato (raw)", cal: 18, pro: 0.9, carb: 3.9, fat: 0.2, itemG: 123, note: "~1 medium tomato" },
+  { name: "Onion (raw)", cal: 40, pro: 1.1, carb: 9.3, fat: 0.1, itemG: 110, note: "~1 medium onion" },
+  { name: "Carrot (raw)", cal: 41, pro: 0.9, carb: 10, fat: 0.2, itemG: 61, note: "~1 medium carrot" },
+  { name: "Cabbage (raw)", cal: 25, pro: 1.3, carb: 5.8, fat: 0.1, cupG: 89 },
+  { name: "Cucumber (raw)", cal: 16, pro: 0.7, carb: 3.6, fat: 0.1, itemG: 200, note: "~1 whole cucumber" },
+  { name: "Mixed Vegetables (stir fried)", cal: 65, pro: 2.5, carb: 8, fat: 3, cupG: 120 },
   // Fruits
-  { name: "Banana (medium)", cal: 89, pro: 1.1, carb: 23, fat: 0.3, srv: "100g" },
-  { name: "Apple (medium)", cal: 52, pro: 0.3, carb: 14, fat: 0.2, srv: "100g" },
-  { name: "Mango (raw)", cal: 60, pro: 0.8, carb: 15, fat: 0.4, srv: "100g" },
-  { name: "Avocado", cal: 160, pro: 2, carb: 9, fat: 15, srv: "100g" },
-  { name: "Watermelon", cal: 30, pro: 0.6, carb: 7.6, fat: 0.2, srv: "100g" },
-  { name: "Orange (medium)", cal: 47, pro: 0.9, carb: 12, fat: 0.1, srv: "100g" },
-  { name: "Pineapple (raw)", cal: 50, pro: 0.5, carb: 13, fat: 0.1, srv: "100g" },
-  { name: "Papaya / Pawpaw", cal: 43, pro: 0.5, carb: 11, fat: 0.3, srv: "100g" },
-  { name: "Strawberries", cal: 32, pro: 0.7, carb: 7.7, fat: 0.3, srv: "100g" },
+  { name: "Banana", cal: 89, pro: 1.1, carb: 23, fat: 0.3, itemG: 118, note: "~1 medium banana" },
+  { name: "Apple", cal: 52, pro: 0.3, carb: 14, fat: 0.2, itemG: 182, note: "~1 medium apple" },
+  { name: "Mango", cal: 60, pro: 0.8, carb: 15, fat: 0.4, itemG: 200, note: "~1 medium mango" },
+  { name: "Avocado", cal: 160, pro: 2, carb: 9, fat: 15, itemG: 200, note: "~1 whole avocado (200g)", cupG: 150 },
+  { name: "Watermelon", cal: 30, pro: 0.6, carb: 7.6, fat: 0.2, itemG: 900, note: "~1 small wedge ÷ use g", cupG: 154 },
+  { name: "Orange", cal: 47, pro: 0.9, carb: 12, fat: 0.1, itemG: 131, note: "~1 medium orange" },
+  { name: "Pineapple (raw)", cal: 50, pro: 0.5, carb: 13, fat: 0.1, cupG: 165 },
+  { name: "Papaya / Pawpaw", cal: 43, pro: 0.5, carb: 11, fat: 0.3, cupG: 145 },
+  { name: "Strawberries", cal: 32, pro: 0.7, carb: 7.7, fat: 0.3, cupG: 152, itemG: 12, note: "~1 medium strawberry" },
+  { name: "Grapes", cal: 67, pro: 0.6, carb: 17, fat: 0.4, cupG: 151 },
   // Dairy
-  { name: "Full Cream Milk", cal: 61, pro: 3.2, carb: 4.8, fat: 3.3, srv: "100ml" },
-  { name: "Skimmed Milk", cal: 34, pro: 3.4, carb: 5, fat: 0.1, srv: "100ml" },
-  { name: "Greek Yoghurt (plain)", cal: 97, pro: 9, carb: 3.6, fat: 5, srv: "100g" },
-  { name: "Plain Yoghurt", cal: 61, pro: 3.5, carb: 4.7, fat: 3.3, srv: "100g" },
-  { name: "Cheddar Cheese", cal: 403, pro: 25, carb: 1.3, fat: 33, srv: "100g" },
-  { name: "Cottage Cheese", cal: 98, pro: 11, carb: 3.4, fat: 4.3, srv: "100g" },
+  { name: "Full Cream Milk", cal: 61, pro: 3.2, carb: 4.8, fat: 3.3, cupG: 244 },
+  { name: "Skimmed Milk", cal: 34, pro: 3.4, carb: 5, fat: 0.1, cupG: 244 },
+  { name: "Greek Yoghurt (plain)", cal: 97, pro: 9, carb: 3.6, fat: 5, cupG: 245 },
+  { name: "Plain Yoghurt", cal: 61, pro: 3.5, carb: 4.7, fat: 3.3, cupG: 245 },
+  { name: "Cheddar Cheese", cal: 403, pro: 25, carb: 1.3, fat: 33, itemG: 28, note: "~1 slice (28g)" },
+  { name: "Cottage Cheese", cal: 98, pro: 11, carb: 3.4, fat: 4.3, cupG: 226 },
   // Fats & Oils
-  { name: "Olive Oil", cal: 884, pro: 0, carb: 0, fat: 100, srv: "100ml" },
-  { name: "Vegetable Oil / Sunflower Oil", cal: 884, pro: 0, carb: 0, fat: 100, srv: "100ml" },
-  { name: "Butter", cal: 717, pro: 0.9, carb: 0.1, fat: 81, srv: "100g" },
-  { name: "Peanut Butter", cal: 588, pro: 25, carb: 20, fat: 50, srv: "100g" },
+  { name: "Olive Oil", cal: 884, pro: 0, carb: 0, fat: 100 },
+  { name: "Vegetable / Sunflower Oil", cal: 884, pro: 0, carb: 0, fat: 100 },
+  { name: "Butter", cal: 717, pro: 0.9, carb: 0.1, fat: 81, itemG: 14, note: "~1 tablespoon (14g)" },
+  { name: "Peanut Butter", cal: 588, pro: 25, carb: 20, fat: 50 },
   // Nuts & Seeds
-  { name: "Almonds", cal: 579, pro: 21, carb: 22, fat: 50, srv: "100g" },
-  { name: "Groundnuts / Peanuts (roasted)", cal: 567, pro: 26, carb: 16, fat: 49, srv: "100g" },
-  { name: "Cashews", cal: 553, pro: 18, carb: 30, fat: 44, srv: "100g" },
-  { name: "Walnuts", cal: 654, pro: 15, carb: 14, fat: 65, srv: "100g" },
-  { name: "Sunflower Seeds", cal: 584, pro: 21, carb: 20, fat: 51, srv: "100g" },
+  { name: "Almonds", cal: 579, pro: 21, carb: 22, fat: 50, itemG: 1.2, note: "~1 almond (use g for handfuls)" },
+  { name: "Groundnuts / Peanuts (roasted)", cal: 567, pro: 26, carb: 16, fat: 49, cupG: 146 },
+  { name: "Cashews", cal: 553, pro: 18, carb: 30, fat: 44, cupG: 137 },
+  { name: "Walnuts", cal: 654, pro: 15, carb: 14, fat: 65, itemG: 7, note: "~1 walnut half" },
+  { name: "Sunflower Seeds", cal: 584, pro: 21, carb: 20, fat: 51, cupG: 128 },
   // Common meals
-  { name: "Beef Stew (with vegetables)", cal: 185, pro: 16, carb: 8, fat: 10, srv: "100g" },
-  { name: "Chicken Stew", cal: 150, pro: 18, carb: 5, fat: 7, srv: "100g" },
-  { name: "Bean Stew", cal: 140, pro: 8, carb: 22, fat: 3, srv: "100g" },
-  { name: "Vegetable Soup", cal: 55, pro: 2.5, carb: 9, fat: 1.5, srv: "100ml" },
-  { name: "Fried Egg (1 large)", cal: 90, pro: 6.3, carb: 0.4, fat: 7, srv: "1 egg (~50g)" },
-  { name: "Scrambled Eggs (2 eggs, no milk)", cal: 182, pro: 12, carb: 1.5, fat: 14, srv: "2 eggs" },
-  { name: "Boiled Egg (1 large)", cal: 78, pro: 6.3, carb: 0.6, fat: 5.3, srv: "1 egg" },
+  { name: "Beef Stew (with vegetables)", cal: 185, pro: 16, carb: 8, fat: 10, cupG: 245 },
+  { name: "Chicken Stew", cal: 150, pro: 18, carb: 5, fat: 7, cupG: 245 },
+  { name: "Bean Stew", cal: 140, pro: 8, carb: 22, fat: 3, cupG: 250 },
+  { name: "Vegetable Soup", cal: 55, pro: 2.5, carb: 9, fat: 1.5, cupG: 244 },
+  { name: "Fried Egg", cal: 196, pro: 13, carb: 0.8, fat: 15, itemG: 46, note: "~1 large egg fried" },
+  { name: "Scrambled Eggs", cal: 182, pro: 12, carb: 1.5, fat: 14, itemG: 100, note: "~2 eggs scrambled" },
+  { name: "Boiled Egg", cal: 155, pro: 13, carb: 1.1, fat: 11, itemG: 50, note: "~1 large egg" },
   // Drinks
-  { name: "Orange Juice (fresh)", cal: 45, pro: 0.7, carb: 10, fat: 0.2, srv: "100ml" },
-  { name: "Whole Milk (1 glass)", cal: 122, pro: 6.4, carb: 9.6, fat: 6.6, srv: "200ml" },
-  { name: "Black Coffee (no sugar)", cal: 2, pro: 0.3, carb: 0, fat: 0, srv: "240ml" },
-  { name: "Tea with milk & sugar", cal: 45, pro: 1, carb: 8, fat: 1, srv: "240ml" },
+  { name: "Black Coffee (no sugar)", cal: 2, pro: 0.3, carb: 0, fat: 0, cupG: 240, itemG: 240, note: "~1 cup (240ml)" },
+  { name: "Coffee with milk (no sugar)", cal: 11, pro: 0.7, carb: 0.9, fat: 0.5, cupG: 240, itemG: 240, note: "~1 cup" },
+  { name: "Coffee with milk & sugar", cal: 30, pro: 0.7, carb: 5.5, fat: 0.5, cupG: 240, itemG: 240, note: "~1 cup" },
+  { name: "Tea (black, no sugar)", cal: 1, pro: 0, carb: 0.2, fat: 0, cupG: 240, itemG: 240, note: "~1 cup" },
+  { name: "Tea with milk & sugar", cal: 45, pro: 1, carb: 8, fat: 1, cupG: 240, itemG: 240, note: "~1 cup" },
+  { name: "Orange Juice (fresh)", cal: 45, pro: 0.7, carb: 10, fat: 0.2, cupG: 248 },
+  { name: "Whole Milk (glass)", cal: 61, pro: 3.2, carb: 4.8, fat: 3.3, itemG: 240, note: "~1 glass (240ml)" },
 ];
+
+// Smart toGrams that uses food-specific item/cup weights when available
+function smartToGrams(qty, unit, food) {
+  if (unit === "g" || unit === "ml") return qty;
+  if (unit === "kg") return qty * 1000;
+  if (unit === "l")  return qty * 1000;
+  if (unit === "oz") return qty * 28.35;
+  if (unit === "lb") return qty * 453.6;
+  if (unit === "tbsp") return qty * 15;
+  if (unit === "tsp")  return qty * 5;
+  if (unit === "cup")  return qty * (food?.cupG || 240);
+  if (unit === "item" || unit === "slice" || unit === "portion") return qty * (food?.itemG || 100);
+  return qty * 100;
+}
 
 function searchLocalDB(query) {
   const q = query.toLowerCase().trim();
-  const words = q.split(/\s+/);
-  return FOOD_DB.filter(food => {
+  const words = q.split(/\s+/).filter(w => w.length > 1);
+  const scored = FOOD_DB.map(food => {
     const name = food.name.toLowerCase();
-    return words.some(word => word.length > 2 && name.includes(word));
-  }).slice(0, 6);
+    let score = 0;
+    words.forEach(word => {
+      if (name.startsWith(word)) score += 3;
+      else if (name.includes(word)) score += 1;
+    });
+    return { food, score };
+  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score);
+  return scored.slice(0, 6).map(x => x.food);
 }
 
 // Unit conversion to grams/ml equivalent for nutrition calc
@@ -190,10 +217,19 @@ const UNIT_OPTIONS = [
 ];
 
 function toGrams(qty, unit) {
-  const u = UNIT_OPTIONS.find(o => o.value === unit);
-  if (!u) return qty;
-  if (u.toG) return qty * u.toG;
-  return qty * 100; // items/slices: assume ~100g each as estimate
+  // All database values are per 100g/ml.
+  // This function returns the actual gram/ml amount so factor = toGrams(qty,unit)/100
+  if (unit === "g" || unit === "ml") return qty;          // 100g → 100, 250ml → 250
+  if (unit === "kg") return qty * 1000;
+  if (unit === "l")  return qty * 1000;
+  if (unit === "cup")  return qty * 240;
+  if (unit === "tbsp") return qty * 15;
+  if (unit === "tsp")  return qty * 5;
+  if (unit === "oz")   return qty * 28.35;
+  if (unit === "lb")   return qty * 453.6;
+  // items / slices / portions: treat qty itself as 100g units
+  // i.e. 1 item = 100g equivalent, so factor = qty
+  return qty * 100;
 }
 
 const SYMPTOM_LIST = [
@@ -290,9 +326,9 @@ function NutritionTab({ state, setState }) {
     const localResults = searchLocalDB(query);
     if (localResults.length) {
       setResults(localResults.map(f => ({ ...f, fromDB: true })));
-      const initU = {}; localResults.forEach(f => { initU[f.name] = "g"; });
+      const initU = {}; localResults.forEach(f => { initU[f.name] = f.itemG ? "item" : "g"; });
       setServingUnit(initU);
-      const initQ = {}; localResults.forEach(f => { initQ[f.name] = "100"; });
+      const initQ = {}; localResults.forEach(f => { initQ[f.name] = f.itemG ? "1" : "100"; });
       setServingQty(initQ);
       setSearching(false);
       return;
@@ -315,21 +351,20 @@ function NutritionTab({ state, setState }) {
     const key = product.fromDB ? product.name : product.product_name;
     const rawQty = parseFloat(servingQty[key] || "100") || 100;
     const unit = servingUnit[key] || "g";
-    const grams = toGrams(rawQty, unit);
+    const grams = smartToGrams(rawQty, unit, product.fromDB ? product : null);
     const factor = grams / 100;
     let food;
     if (product.fromDB) {
-      // Local database entry
+      const unitLabel = unit === "item" && product.note ? product.note : `${rawQty} ${unit}`;
       food = {
         name: product.name,
         calories: Math.round(product.cal * factor),
         protein: Math.round(product.pro * factor * 10) / 10,
         carbs: Math.round(product.carb * factor * 10) / 10,
         fat: Math.round(product.fat * factor * 10) / 10,
-        serving: `${rawQty} ${unit}`,
+        serving: unitLabel,
       };
     } else {
-      // Open Food Facts entry (kept as fallback)
       const n = product.nutriments;
       food = {
         name: product.product_name + (product.brands ? ` (${product.brands})` : ""),
@@ -428,24 +463,28 @@ function NutritionTab({ state, setState }) {
           const prot = isLocal ? p.pro : (p.nutriments?.proteins_100g || 0).toFixed(1);
           const carb = isLocal ? p.carb : (p.nutriments?.carbohydrates_100g || 0).toFixed(1);
           const fat = isLocal ? p.fat : (p.nutriments?.fat_100g || 0).toFixed(1);
-          const qty = servingQty[key] || "100";
-          const unit = servingUnit[key] || "g";
-          const estCals = Math.round(kcal * toGrams(parseFloat(qty) || 100, unit) / 100);
+          // Smart defaults: foods with itemG default to "1 item", drinks/liquids to ml
+          const defaultUnit = isLocal && p.itemG ? "item" : "g";
+          const defaultQty = isLocal && p.itemG ? "1" : "100";
+          const qty = servingQty[key] !== undefined ? servingQty[key] : defaultQty;
+          const unit = servingUnit[key] !== undefined ? servingUnit[key] : defaultUnit;
+          const estCals = Math.round(kcal * smartToGrams(parseFloat(qty) || 100, unit, p.fromDB ? p : null) / 100);
           return (
             <div key={i} style={{ padding: "10px 0", borderBottom: "0.5px solid var(--color-border-tertiary,rgba(0,0,0,0.08))" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
                 <p style={{ fontSize: 14, fontWeight: 500 }}>{key}</p>
                 {isLocal && <span style={{ fontSize: 11, background: "#EAF3DE", color: "#3B6D11", padding: "1px 6px", borderRadius: 8, flexShrink: 0 }}>✓ Verified</span>}
               </div>
-              <p style={{ fontSize: 12, color: "var(--color-text-secondary,#666)", marginBottom: 8 }}>
+              <p style={{ fontSize: 12, color: "var(--color-text-secondary,#666)", marginBottom: 4 }}>
                 {kcal} kcal · {prot}g protein · {carb}g carbs · {fat}g fat <span style={{ opacity: 0.6 }}>per 100g</span>
               </p>
+              {isLocal && p.note && <p style={{ fontSize: 11, color: "#534AB7", marginBottom: 6 }}>💡 {p.note}</p>}
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <Inp type="number" value={qty} onChange={e => setServingQty(q => ({ ...q, [key]: e.target.value }))} placeholder="Qty" style={{ width: 70 }} />
+                <Inp type="number" value={qty} onChange={e => setServingQty(q => ({ ...q, [key]: e.target.value }))} placeholder="Qty" style={{ width: 60 }} />
                 <Sel value={unit} onChange={e => setServingUnit(u => ({ ...u, [key]: e.target.value }))} style={{ flex: 1, minWidth: 130 }}>
                   {UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </Sel>
-                <span style={{ fontSize: 12, color: "#D85A30", flexShrink: 0, fontWeight: 500 }}>≈ {estCals} kcal</span>
+                <span style={{ fontSize: 13, color: "#D85A30", flexShrink: 0, fontWeight: 600 }}>≈ {estCals} kcal</span>
                 <Btn onClick={() => addFromDB(p)} primary small><i className="ti ti-plus" aria-hidden="true" /> Add</Btn>
               </div>
             </div>
